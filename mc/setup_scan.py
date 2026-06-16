@@ -28,9 +28,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-STRUCTURE = ROOT / "phytate.xyz"  # symlinked into each run dir
+STRUCTURE = ROOT / "phytate.xyz"
 
-# Salt strings are reused verbatim in the folder name and the YAML.
+# Kept as strings so the folder name and the YAML value stay byte-identical
+# (e.g. "0.030", "1000") rather than risking float reformatting.
 PH_RANGE = [4, 6, 7, 10]
 SALT_RANGE = ["0.005", "0.030", "0.15", "1000"]
 MATRIX = [(pH, salt) for pH in PH_RANGE for salt in SALT_RANGE]
@@ -53,33 +54,34 @@ def to_equilibration(template: str) -> str:
 
 
 def slurm_script(pH: int, salt: str, args: argparse.Namespace) -> str:
-    sbatch = [
+    directives = [
         f"#SBATCH --job-name=pH{pH}_I{salt}",
         f"#SBATCH -A {args.project}",
         "#SBATCH --nodes=1",
         "#SBATCH --ntasks=1",
         f"#SBATCH --cpus-per-task={args.cores}",
         f"#SBATCH --time={args.time}",
-        "#SBATCH --output=slurm-%j.out",
     ]
     if args.partition:
-        sbatch.insert(5, f"#SBATCH --partition={args.partition}")
+        directives.append(f"#SBATCH --partition={args.partition}")
+    directives.append("#SBATCH --output=slurm-%j.out")
+    header = "\n".join(directives)
 
     return f"""#!/bin/bash
-{chr(10).join(sbatch)}
+{header}
 
 set -euo pipefail
 
-# Run inside the directory this job was submitted from.
+# input.yaml/state.yaml are per-dir, so resolve paths against the submit dir;
+# fall back to the script's own location when run by hand.
 cd "${{SLURM_SUBMIT_DIR:-$(dirname "$0")}}"
 
 FAUNUS="{args.faunus}"
 
-# Short equilibration: relax the master state at this (pH, I) before sampling.
-# input_eq.yaml uses a reduced propagate.repeat and disables the umbrella section.
+# Relax this (pH, I) state first — every umbrella window seeds from it.
 $FAUNUS run -i input_eq.yaml -s state.yaml
 
-# Umbrella sampling -> pmf.csv. Windows run in parallel, one thread per core.
+# One walker per window, one thread per core.
 $FAUNUS umbrella -i input.yaml --state state.yaml -o pmf.csv \\
     -j "${{SLURM_CPUS_PER_TASK:-{args.cores}}}"
 """
@@ -127,8 +129,7 @@ def main() -> int:
         (d / "job.slurm").write_text(slurm_script(pH, salt, args))
 
         link = d / "phytate.xyz"
-        if link.is_symlink() or link.exists():
-            link.unlink()
+        link.unlink(missing_ok=True)
         link.symlink_to(Path("..") / ".." / STRUCTURE.name)
 
         print(f"  {d.relative_to(ROOT)}")
