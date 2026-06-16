@@ -18,8 +18,8 @@
 {% set pH = 7.0 %}
 {% set salt = 0.15 %}
 {% set n_phytate = 5 %}
-{% set num_windows = 19 %}{# adjust to match available cores #}
-{% set window_width = 20.0 %}
+{% set num_windows = 40 %}{# adjust to match available cores #}
+{% set window_width = 6.0 %}
 {% set window_spacing = (Lz / 2 - window_width) / (num_windows - 1) %}
 {% set active_state = 9 %}
 {# Phytate protonation states: name, pKa for deprotonation to next state #}

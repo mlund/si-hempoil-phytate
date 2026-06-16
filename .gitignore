@@ -1,0 +1,11 @@
+*~
+*.csv
+*.pqr
+*.xtc
+*.dat
+*.png
+*.pdf
+*output.yaml
+*.tcl
+*.psf
+runs/
