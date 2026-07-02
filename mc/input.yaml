@@ -133,9 +133,19 @@ system:
           z0: {{ -Lz / 2 + 0.01 }}
 
 analysis:
+  - !ElectricPotentialProfile
+    frequency: !Every 10
+    selection: "all" 
+    resolution: 0.5
+    file: potential_all.csv
+  - !ElectricPotentialProfile
+    frequency: !Every 10
+    selection: "molecule peptide" 
+    resolution: 0.5
+    file: potential_peptide.csv
   - !Trajectory
     file: "traj.xtc"
-    frequency: !Every 1000
+    frequency: !Every 100
   - !Energy
     file: "energy.csv"
     frequency: !Every 100
