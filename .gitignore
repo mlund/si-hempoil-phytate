@@ -1,5 +1,7 @@
 *~
 *.csv
+# hand-curated experimental data, not generated:
+!mc/experimental_zeta.csv
 *.pqr
 *.xtc
 *.dat
