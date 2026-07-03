@@ -75,7 +75,7 @@ def parse_window(output_yaml: Path):
     charges = []
     shape = None
     for item in analysis:
-        (key, val), = item.items()  # each analysis entry is a single-key mapping
+        ((key, val),) = item.items()  # each analysis entry is a single-key mapping
         if key == "collectivevariable" and val.get("property") == "AtomPosition":
             z = val["mean"]  # mean phytate (INO) z for this window
         elif key == "multipole":
@@ -92,8 +92,9 @@ def mean_potential(profile_csvs) -> tuple:
     Returns (z, mean_potential); the z grid is taken from the first file.
     """
     # Columns: z/Å (0), ..., potential/mV (3); the grid is identical across windows.
-    profiles = [np.genfromtxt(p, delimiter=",", skip_header=1, usecols=(0, 3))
-                for p in profile_csvs]
+    profiles = [
+        np.genfromtxt(p, delimiter=",", skip_header=1, usecols=(0, 3)) for p in profile_csvs
+    ]
     z = profiles[0][:, 0]
     return z, np.mean([p[:, 1] for p in profiles], axis=0)
 
@@ -118,8 +119,10 @@ def main() -> None:
 
         # Potential profiles span the full slit; average each selection over windows.
         z, pot_all = mean_potential(sorted(run.glob("umbrella_states/window*/potential_all.csv")))
-        _, pot_peptide = mean_potential(sorted(run.glob("umbrella_states/window*/potential_peptide.csv")))
-        for zi, pa, pp in zip(z + half_lz, pot_all, pot_peptide):
+        _, pot_peptide = mean_potential(
+            sorted(run.glob("umbrella_states/window*/potential_peptide.csv"))
+        )
+        for zi, pa, pp in zip(z + half_lz, pot_all, pot_peptide, strict=True):
             potential_rows.append([ph, ionic, zi, pa, pp])
 
         windows = sorted(run.glob("umbrella_states/window*_output.yaml"), key=window_index)

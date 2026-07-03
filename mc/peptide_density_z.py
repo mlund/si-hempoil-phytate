@@ -10,6 +10,7 @@ Reads `{run_dir}/traj.psf` + `{run_dir}/traj.xtc` (default: cwd) and writes
 Peptide atoms = everything except phytate beads (INO, PH0..PH12) and
 ghost H+ particles. Density is averaged over all frames.
 """
+
 import sys
 from pathlib import Path
 
@@ -40,8 +41,9 @@ def main(run_dir: Path) -> None:
     z_centers = 0.5 * (z_edges[:-1] + z_edges[1:])
 
     out = run_dir / "peptide_density_z.csv"
-    np.savetxt(out, np.c_[z_centers, density],
-               delimiter=",", header="z_A,density_per_A3", comments="")
+    np.savetxt(
+        out, np.c_[z_centers, density], delimiter=",", header="z_A,density_per_A3", comments=""
+    )
     print(f"wrote {out}  ({n_frames} frames, {peptide.n_atoms} peptide atoms)")
 
 

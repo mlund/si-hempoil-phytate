@@ -23,19 +23,20 @@ import argparse
 from pathlib import Path
 
 import numpy as np
+from pygrpy.grpy_tensors import conglomerateMobilityMatrixAtCentre
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
-from pygrpy.grpy_tensors import conglomerateMobilityMatrixAtCentre
-
-KB = 1.380649e-23   # J / K
-ANG = 1e-10         # m
+KB = 1.380649e-23  # J / K
+ANG = 1e-10  # m
 
 # Bondi vdW radii [Angstrom]
 VDW = {"H": 1.20, "C": 1.70, "N": 1.55, "O": 1.52, "P": 1.80, "S": 1.80}
 
-PHYTIC_ACID = ("[C@@H]1([C@@H]([C@@H]([C@@H]([C@H]([C@@H]1OP(=O)(O)O)"
-               "OP(=O)(O)O)OP(=O)(O)O)OP(=O)(O)O)OP(=O)(O)O)OP(=O)(O)O")
+PHYTIC_ACID = (
+    "[C@@H]1([C@@H]([C@@H]([C@@H]([C@H]([C@@H]1OP(=O)(O)O)"
+    "OP(=O)(O)O)OP(=O)(O)O)OP(=O)(O)O)OP(=O)(O)O)OP(=O)(O)O"
+)
 
 
 def phytate_smiles(charge):
@@ -50,11 +51,15 @@ def phytate_smiles(charge):
         raise SystemExit("charge must be an integer in 0..12")
     doubly = max(0, charge - 6)
     singly = charge - 2 * doubly
-    groups = (["P(=O)([O-])[O-]"] * doubly
-              + ["P(=O)([O-])O"] * singly
-              + ["P(=O)(O)O"] * (6 - doubly - singly))
+    groups = (
+        ["P(=O)([O-])[O-]"] * doubly
+        + ["P(=O)([O-])O"] * singly
+        + ["P(=O)(O)O"] * (6 - doubly - singly)
+    )
     parts = PHYTIC_ACID.split("P(=O)(O)O")  # 7 fragments around the 6 phosphates
-    return "".join(part + grp for part, grp in zip(parts, groups)) + parts[-1]
+    # 7 parts vs 6 groups: the trailing fragment is appended separately, so the
+    # length mismatch is intentional (strict=False).
+    return "".join(part + grp for part, grp in zip(parts, groups, strict=False)) + parts[-1]
 
 
 def make_conformers(smiles, n, seed):
@@ -84,8 +89,8 @@ def coords_and_radii(mol, conf_id, hydration):
 def diffusion(centres, radii, eta, T):
     """Isotropic (D_t, D_r) and rotational anisotropy from the GRPY mobility."""
     M = conglomerateMobilityMatrixAtCentre(centres, radii)
-    D_t = KB * T * np.linalg.eigvalsh(M[0:3, 0:3] / (eta * ANG))       # m^2/s
-    D_r = KB * T * np.linalg.eigvalsh(M[3:6, 3:6] / (eta * ANG ** 3))  # rad^2/s
+    D_t = KB * T * np.linalg.eigvalsh(M[0:3, 0:3] / (eta * ANG))  # m^2/s
+    D_r = KB * T * np.linalg.eigvalsh(M[3:6, 3:6] / (eta * ANG**3))  # rad^2/s
     return D_t.mean(), D_r.mean(), D_r.max() / D_r.min()
 
 
@@ -116,16 +121,24 @@ def scan_charge(charge, args):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--charges", default="0,3,6,9,12",
-                    help="comma-separated net-charge magnitudes to scan (0..12)")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "--charges",
+        default="0,3,6,9,12",
+        help="comma-separated net-charge magnitudes to scan (0..12)",
+    )
     ap.add_argument("--n", type=int, default=20, help="conformers per charge")
     ap.add_argument("--seed", type=int, default=1, help="RDKit seed (avoid 0: embeds 1 conf)")
     ap.add_argument("--temperature", type=float, default=298.15, help="K")
     ap.add_argument("--viscosity", type=float, default=8.9e-4, help="solvent [Pa*s]")
-    ap.add_argument("--hydration", type=float, default=0.0,
-                    help="shell thickness [A] added to every bead (try 1.4 for a water shell)")
+    ap.add_argument(
+        "--hydration",
+        type=float,
+        default=0.0,
+        help="shell thickness [A] added to every bead (try 1.4 for a water shell)",
+    )
     ap.add_argument("--csv", type=Path, default=Path(__file__).parent / "diffusion.csv")
     args = ap.parse_args()
 
@@ -133,14 +146,19 @@ def main():
     results = [scan_charge(c, args) for c in charges]
 
     fields = list(results[0])
-    print(f"{'q':>4} {'n':>3} {'Rg/A':>6} {'tau_r/ps':>9} {'D_rot':>10} "
-          f"{'aniso':>6} {'D_t/m2s':>10} {'a_H/A':>6}")
+    print(
+        f"{'q':>4} {'n':>3} {'Rg/A':>6} {'tau_r/ps':>9} {'D_rot':>10} "
+        f"{'aniso':>6} {'D_t/m2s':>10} {'a_H/A':>6}"
+    )
     for r in results:
-        print(f"{r['charge']:>4d} {r['n_conf']:>3d} {r['Rg_A']:>6.2f} "
-              f"{r['tau_r_ps']:>9.1f} {r['D_rot_rad2_s']:>10.2e} "
-              f"{r['D_rot_anisotropy']:>6.2f} {r['D_trans_m2_s']:>10.2e} {r['a_H_A']:>6.2f}")
+        print(
+            f"{r['charge']:>4d} {r['n_conf']:>3d} {r['Rg_A']:>6.2f} "
+            f"{r['tau_r_ps']:>9.1f} {r['D_rot_rad2_s']:>10.2e} "
+            f"{r['D_rot_anisotropy']:>6.2f} {r['D_trans_m2_s']:>10.2e} {r['a_H_A']:>6.2f}"
+        )
 
     import csv
+
     with open(args.csv, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()

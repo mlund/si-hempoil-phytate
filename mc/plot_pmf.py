@@ -57,8 +57,11 @@ def box_length_z(output_yaml: Path) -> float:
     lines = output_yaml.read_text().splitlines()
     start = next(i for i, line in enumerate(lines) if line.strip().startswith("cell: !Slit"))
     # The three dimensions follow as a YAML list ("- <value>"); Lz is the third.
-    dims = [float(m.group(1)) for line in lines[start + 1 : start + 4]
-            if (m := re.match(r"\s*-\s*([0-9.eE+-]+)", line))]
+    dims = [
+        float(m.group(1))
+        for line in lines[start + 1 : start + 4]
+        if (m := re.match(r"\s*-\s*([0-9.eE+-]+)", line))
+    ]
     return dims[2]
 
 
@@ -90,15 +93,21 @@ def main() -> None:
     )
     parser.add_argument("-o", "--output", default="pmf.png", help="output image path")
     parser.add_argument(
-        "--csv", default="all_pmfs.csv",
+        "--csv",
+        default="all_pmfs.csv",
         help="tidy long-format CSV of the referenced PMFs (default: all_pmfs.csv)",
     )
     parser.add_argument(
-        "-w", "--window", type=float, default=10.0,
+        "-w",
+        "--window",
+        type=float,
+        default=10.0,
         help="width in Å of the tail fit window (default: 10)",
     )
     parser.add_argument(
-        "--max-ionic-strength", type=float, default=1.0,
+        "--max-ionic-strength",
+        type=float,
+        default=1.0,
         help="skip runs above this I in mol/L (default: 1.0, drops the I1000 sentinels)",
     )
     args = parser.parse_args()
@@ -116,12 +125,14 @@ def main() -> None:
     # One panel per pH; within a panel, colour curves by ionic strength.
     ph_values = sorted({ph_from_name(n) for n, _ in runs})
     ionic_values = sorted({ionic_strength_from_name(n) for n, _ in runs})
-    colors = {i: plt.cm.viridis(x) for i, x in zip(ionic_values, np.linspace(0, 0.85, len(ionic_values)))}
+    shades = np.linspace(0, 0.85, len(ionic_values))
+    colors = {i: plt.cm.viridis(x) for i, x in zip(ionic_values, shades, strict=True)}
 
     ncols = 2
     nrows = -(-len(ph_values) // ncols)  # ceil division
-    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 3.2 * nrows),
-                             sharex=True, sharey=True, squeeze=False)
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(5 * ncols, 3.2 * nrows), sharex=True, sharey=True, squeeze=False
+    )
     panels = {ph: axes.flat[k] for k, ph in enumerate(ph_values)}
 
     records = []  # accumulate one long-format block (pH, I, r, pmf, stderr) per run
@@ -154,7 +165,7 @@ def main() -> None:
         ax.set_title(f"pH {ph:g}")
         ax.axhline(0, color="gray", ls="--", lw=0.5)
         ax.legend(fontsize="small")
-    for ax in axes.flat[len(ph_values):]:  # hide any unused panels
+    for ax in axes.flat[len(ph_values) :]:  # hide any unused panels
         ax.set_visible(False)
 
     fig.supxlabel("r = distance from decorated wall (Å)")
@@ -166,9 +177,14 @@ def main() -> None:
 
     # Tidy long format: read with pandas.read_csv(...) then groupby([pH, ionic_strength]).
     table = np.vstack(records)
-    np.savetxt(args.csv, table, delimiter=",", comments="",
-               header="pH,ionic_strength,r,pmf_kT,stderr_kT",
-               fmt=["%g", "%g", "%.4f", "%.6f", "%.6f"])
+    np.savetxt(
+        args.csv,
+        table,
+        delimiter=",",
+        comments="",
+        header="pH,ionic_strength,r,pmf_kT,stderr_kT",
+        fmt=["%g", "%g", "%.4f", "%.6f", "%.6f"],
+    )
     print(f"Saved {args.csv} ({len(table)} rows)")
 
     plt.show()

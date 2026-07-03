@@ -18,6 +18,7 @@ Each SLURM job requests a single node with --cores CPUs and runs, in its dir:
     faunus umbrella -i input.yaml --state state.yaml \
                     -o pmf.csv -j <cores>               # umbrella sampling -> PMF
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,10 +39,8 @@ MATRIX = [(pH, salt) for pH in PH_RANGE for salt in SALT_RANGE]
 
 
 def render(template: str, pH: int, salt: str) -> str:
-    out = re.sub(r"\{% set pH = [^%]*%\}",
-                 f"{{% set pH = {pH}.0 %}}", template, count=1)
-    out = re.sub(r"\{% set salt = [^%]*%\}",
-                 f"{{% set salt = {salt} %}}", out, count=1)
+    out = re.sub(r"\{% set pH = [^%]*%\}", f"{{% set pH = {pH}.0 %}}", template, count=1)
+    out = re.sub(r"\{% set salt = [^%]*%\}", f"{{% set salt = {salt} %}}", out, count=1)
     return out
 
 
@@ -88,26 +87,44 @@ $FAUNUS umbrella -i input.yaml --state state.yaml -o pmf.csv \\
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--input", type=Path, default=ROOT / "input.yaml",
-                   help="template input file (default: input.yaml)")
-    p.add_argument("--state", type=Path, default=ROOT / "state.yaml",
-                   help="master state file copied into each run (default: state.yaml)")
-    p.add_argument("--project", default="lu2026-2-71",
-                   help="SLURM project/account ID, -A (default: lu2026-2-71)")
-    p.add_argument("-N", "--cores", type=int, default=40,
-                   help="CPU cores per job on one node (default: 40, matches num_windows)")
-    p.add_argument("--time", default="24:00:00",
-                   help="SLURM wall-clock limit (default: 24:00:00)")
-    p.add_argument("--partition", default=None,
-                   help="SLURM partition/queue (optional)")
-    p.add_argument("--faunus", default="faunus",
-                   help="faunus executable/command (default: faunus)")
-    p.add_argument("--submit", action="store_true",
-                   help="sbatch each job from its directory after generating")
-    p.add_argument("--rerun", action="store_true",
-                   help="with --submit, resubmit even if pmf.csv exists (clears umbrella_states)")
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument(
+        "--input",
+        type=Path,
+        default=ROOT / "input.yaml",
+        help="template input file (default: input.yaml)",
+    )
+    p.add_argument(
+        "--state",
+        type=Path,
+        default=ROOT / "state.yaml",
+        help="master state file copied into each run (default: state.yaml)",
+    )
+    p.add_argument(
+        "--project",
+        default="lu2026-2-71",
+        help="SLURM project/account ID, -A (default: lu2026-2-71)",
+    )
+    p.add_argument(
+        "-N",
+        "--cores",
+        type=int,
+        default=40,
+        help="CPU cores per job on one node (default: 40, matches num_windows)",
+    )
+    p.add_argument("--time", default="24:00:00", help="SLURM wall-clock limit (default: 24:00:00)")
+    p.add_argument("--partition", default=None, help="SLURM partition/queue (optional)")
+    p.add_argument("--faunus", default="faunus", help="faunus executable/command (default: faunus)")
+    p.add_argument(
+        "--submit", action="store_true", help="sbatch each job from its directory after generating"
+    )
+    p.add_argument(
+        "--rerun",
+        action="store_true",
+        help="with --submit, resubmit even if pmf.csv exists (clears umbrella_states)",
+    )
     args = p.parse_args()
 
     for f in (args.input, args.state, STRUCTURE):
@@ -147,8 +164,9 @@ def main() -> int:
         if args.rerun:
             shutil.rmtree(d / "umbrella_states", ignore_errors=True)
         try:
-            out = subprocess.run(["sbatch", "job.slurm"], cwd=d,
-                                 check=True, capture_output=True, text=True)
+            out = subprocess.run(
+                ["sbatch", "job.slurm"], cwd=d, check=True, capture_output=True, text=True
+            )
             print(f"  {d.name}: {out.stdout.strip()}")
         except FileNotFoundError:
             p.error("sbatch not found — run --submit on the cluster")
