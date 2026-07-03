@@ -10,3 +10,4 @@
 *.psf
 runs/
 CLAUDE.md
+.ipynb_checkpoints
