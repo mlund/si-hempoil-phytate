@@ -14,6 +14,7 @@ dependencies = [
     # Free-phytate hydrodynamic diffusion (diffusion/rotational_diffusion.py)
     "rdkit>=2026.3",
     "pygrpy>=0.1.5",
+    "scipy>=1.14",  # runtime dependency of pygrpy (undeclared in its metadata)
 ]
 
 [tool.uv]
