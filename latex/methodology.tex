@@ -221,6 +221,64 @@ PMFs are computed at pH~4, 6, 7, and 10 and ionic strengths
 $I = 0.005$, $0.03$, and $0.15$\,M NaCl (5--150\,mM) to probe the
 interplay of electrostatic screening and charge regulation.
 
+\section{Free phytate diffusion}
+
+The rotational and translational diffusion of a single phytate molecule in
+bulk solution are estimated for each protonation state from a hydrodynamic
+bead model, independently of the Monte Carlo simulations.  For a given net
+charge, 20 conformers are generated with RDKit (ETKDGv3 embedding followed by
+MMFF94 optimisation, with a UFF fallback where MMFF lacks parameters for the
+phosphate anions)~\cite{RDKit}.  Each conformer is mapped to an all-atom bead
+model --- one bead per atom with Bondi van der Waals radii --- and the
+$6\times6$ Rotne--Prager--Yamakawa grand mobility matrix is evaluated with
+PyGRPY~\cite{Zuk2018,Waszkiewicz2023}.  The diffusion tensors follow as
+$\mathbf{D} = k_BT\,\boldsymbol{\mu}$ (water viscosity $\eta = 0.89$\,mPa\,s at
+298.15\,K).  We report the isotropic rotational diffusion coefficient
+$D_\text{r}$, the rotational correlation time $\tau_\text{r} = 1/(6D_\text{r})$,
+the translational coefficient $D_\text{t}$, and the Stokes radius
+$a_\text{H} = k_BT/(6\pi\eta D_\text{t})$, each averaged over the conformer
+ensemble.
+
+Protonation enters this estimate through geometry alone: deprotonation removes
+the peripheral hydrogen beads and reshapes the phosphate arms, altering the
+bare hydrodynamic shape.  Stick boundary conditions are assumed and no
+ionic-atmosphere friction is included, so the values are order-of-magnitude
+estimates of the free-phytate tumbling time ($\tau_\text{r}\approx0.1$\,ns).
+
+\section{Position-dependent rotational mobility}
+
+A relative, position-resolved rotational mobility of the phytate is extracted
+from the Monte Carlo trajectories themselves.  Each accepted rigid-body
+rotation contributes its squared angular step, and the mean-square angular
+displacement per attempted move, $\langle\Delta\theta^2\rangle$, is accumulated
+for every protonation state and pooled.  The ratio of this quantity to its bulk
+value gives a rough rotational-diffusion profile,
+\[
+\frac{D(r)}{D_0} \approx
+\frac{\langle\Delta\theta^2\rangle(r)}{\langle\Delta\theta^2\rangle_\text{bulk}},
+\]
+where the bulk reference is the mean over the windows nearest the box centre.
+Monte Carlo steps carry no physical time scale, so only the relative profile
+$D(r)/D_0$ is meaningful; it measures how strongly the brush hinders phytate
+tumbling on approach.
+
+\section{Zeta potential}
+
+The electric-potential analysis records the laterally averaged charge density
+$\sigma(z)$ in each slab alongside the mean electrostatic potential, the
+screened sum
+\[
+\varphi(z) = \frac{2\pi l_B}{\kappa}\sum_{z'}\sigma(z')\,e^{-\kappa|z-z'|},
+\]
+with $l_B$ the Bjerrum length and $1/\kappa$ the Debye length of the medium, so
+that $\varphi\to0$ in the bulk.  We identify the hydrodynamic shear plane with
+the outer edge of the fixed brush charge --- the largest $r$ at which the
+peptide charge density $|\sigma(z)|$ still exceeds 2\% of its peak --- and
+estimate the $\zeta$-potential as $\varphi$ evaluated there.  The sign and
+pH-dependence of this estimate are robust, whereas its magnitude depends on the
+choice of shear plane ($\varphi$ is several-fold larger read inside the brush)
+and on the planar, single-peptide geometry.
+
 \bibliographystyle{unsrt}
 \bibliography{references}
 \end{document}
