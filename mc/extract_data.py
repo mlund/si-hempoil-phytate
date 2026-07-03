@@ -14,11 +14,18 @@ The MC RotateMolecule moves report a per-attempt mean-square angular displacemen
 pooled over the phytate protonation states this is a rough rotational-mobility
 proxy, giving D(r)/D0 ~ msd_rot(r) / msd_rot(bulk).
 
-Writes four tidy CSVs for pandas.read_csv:
+The potential analysis also samples the charge density sigma(z). We estimate a
+zeta potential as the total potential at the hydrodynamic shear plane, taken at
+the outer edge of the fixed brush charge (largest r where |sigma_peptide| exceeds
+a small fraction of its peak). Magnitude is shear-plane dependent; the sign and
+pH-trend are the meaningful output.
+
+Writes five tidy CSVs for pandas.read_csv:
   charge.csv          long format: pH, ionic_strength, r, selection, charge, charge_error
   polymer_shape.csv   wide format: pH, ionic_strength, r, <shape descriptors...>
   potential.csv       wide format: pH, ionic_strength, r, potential_all_mV, potential_peptide_mV
   rotational_msd.csv  wide format: pH, ionic_strength, r, msd_rot
+  zeta.csv            wide format: pH, ionic_strength, r_shear, zeta_mV
 """
 
 import argparse
@@ -113,17 +120,31 @@ def parse_window(output_yaml: Path):
     return z, charges, shape, rotation_msd(doc)
 
 
-def mean_potential(profile_csvs) -> tuple:
-    """Average the potential/mV column over a set of same-grid profiles.
+def mean_profile(profile_csvs, cols) -> tuple:
+    """Average the requested data columns over a set of same-grid profiles.
 
-    Returns (z, mean_potential); the z grid is taken from the first file.
+    Columns of potential_*.csv: z/Å (0), slab_charge_density/e·Å⁻² (1),
+    charge_density/e·Å⁻³ (2), potential/mV (3), error (4), field (5). The grid is
+    identical across windows. Returns (z, mean_col, ...) for each column in `cols`.
     """
-    # Columns: z/Å (0), ..., potential/mV (3); the grid is identical across windows.
     profiles = [
-        np.genfromtxt(p, delimiter=",", skip_header=1, usecols=(0, 3)) for p in profile_csvs
+        np.genfromtxt(p, delimiter=",", skip_header=1, usecols=(0, *cols)) for p in profile_csvs
     ]
-    z = profiles[0][:, 0]
-    return z, np.mean([p[:, 1] for p in profiles], axis=0)
+    avg = np.mean(profiles, axis=0)
+    return (avg[:, 0], *(avg[:, i + 1] for i in range(len(cols))))
+
+
+def shear_zeta(r, sigma_peptide, potential_all, half_lz, threshold=0.02):
+    """Zeta = total potential at the fixed-charge edge of the brush.
+
+    The shear plane is the outermost point (brush side, r < Lz/2) where the peptide
+    areal charge density exceeds `threshold` of its peak; beyond it the fixed charge
+    has vanished and the potential is purely diffuse. Returns (r_shear, zeta_mV).
+    """
+    sig = np.abs(sigma_peptide)
+    brush = (r < half_lz) & (sig > threshold * sig.max())
+    r_shear = r[brush].max()
+    return r_shear, float(np.interp(r_shear, r, potential_all))
 
 
 def main() -> None:
@@ -132,6 +153,7 @@ def main() -> None:
     parser.add_argument("--shape", default="polymer_shape.csv", help="output shape CSV")
     parser.add_argument("--potential", default="potential.csv", help="output potential CSV")
     parser.add_argument("--msd", default="rotational_msd.csv", help="output rotational-MSD CSV")
+    parser.add_argument("--zeta", default="zeta.csv", help="output shear-plane zeta CSV")
     args = parser.parse_args()
 
     charge_rows = []
@@ -139,6 +161,7 @@ def main() -> None:
     shape_fields = None
     potential_rows = []
     msd_rows = []
+    zeta_rows = []
     for output_yaml in sorted(RUNS_DIR.glob("*/output.yaml")):
         run = output_yaml.parent
         name = run.name
@@ -147,12 +170,17 @@ def main() -> None:
         half_lz = load_yaml(output_yaml)["cell"][2] / 2  # Lz is the slit z-length
 
         # Potential profiles span the full slit; average each selection over windows.
-        z, pot_all = mean_potential(sorted(run.glob("umbrella_states/window*/potential_all.csv")))
-        _, pot_peptide = mean_potential(
-            sorted(run.glob("umbrella_states/window*/potential_peptide.csv"))
-        )
-        for zi, pa, pp in zip(z + half_lz, pot_all, pot_peptide, strict=True):
-            potential_rows.append([ph, ionic, zi, pa, pp])
+        all_csvs = sorted(run.glob("umbrella_states/window*/potential_all.csv"))
+        pep_csvs = sorted(run.glob("umbrella_states/window*/potential_peptide.csv"))
+        z, pot_all = mean_profile(all_csvs, (3,))
+        _, pot_peptide, sigma_peptide = mean_profile(pep_csvs, (3, 1))  # potential + charge density
+        r_prof = z + half_lz
+        for ri, pa, pp in zip(r_prof, pot_all, pot_peptide, strict=True):
+            potential_rows.append([ph, ionic, ri, pa, pp])
+
+        # Zeta at the fixed-charge edge of the brush (sigma_peptide -> 0).
+        r_shear, zeta = shear_zeta(r_prof, sigma_peptide, pot_all, half_lz)
+        zeta_rows.append([ph, ionic, r_shear, zeta])
 
         windows = sorted(run.glob("umbrella_states/window*_output.yaml"), key=window_index)
         for win in windows:
@@ -174,6 +202,7 @@ def main() -> None:
     shape_rows.sort(key=lambda row: (row[0], row[1], row[2]))
     potential_rows.sort(key=lambda row: (row[0], row[1], row[2]))
     msd_rows.sort(key=lambda row: (row[0], row[1], row[2]))
+    zeta_rows.sort(key=lambda row: (row[0], row[1]))
 
     with open(args.charge, "w", newline="") as f:
         w = csv.writer(f)
@@ -198,6 +227,12 @@ def main() -> None:
         w.writerow(["pH", "ionic_strength", "r", "msd_rot"])
         w.writerows(msd_rows)
     print(f"Saved {args.msd} ({len(msd_rows)} rows)")
+
+    with open(args.zeta, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["pH", "ionic_strength", "r_shear", "zeta_mV"])
+        w.writerows(zeta_rows)
+    print(f"Saved {args.zeta} ({len(zeta_rows)} rows)")
 
 
 if __name__ == "__main__":
