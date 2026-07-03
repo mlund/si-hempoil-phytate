@@ -1,0 +1,21 @@
+[project]
+name = "si-hempoil-phytate"
+version = "0.1.0"
+description = "MC analysis of phytate near an oleosin peptide brush (Faunus), plus free-phytate hydrodynamic diffusion estimates."
+requires-python = ">=3.12"
+dependencies = [
+    # PMF / charge / potential / shape analysis (mc/plot_pmf.py, mc/extract_data.py, mc/analysis.ipynb)
+    "numpy>=2.5",
+    "pandas>=3.0",
+    "matplotlib>=3.11",
+    "pyyaml>=6.0",
+    "jupyterlab>=4.6",
+    "ipykernel>=7.3",
+    # Free-phytate hydrodynamic diffusion (diffusion/rotational_diffusion.py)
+    "rdkit>=2026.3",
+    "pygrpy>=0.1.5",
+]
+
+[tool.uv]
+# Scripts + notebook repo, not an installable package -- only resolve dependencies.
+package = false
