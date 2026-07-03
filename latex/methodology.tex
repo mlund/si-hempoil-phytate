@@ -12,6 +12,57 @@
 \begin{document}
 \maketitle
 
+\section*{Methods draft --- \S2.2.10 Computational simulations}
+
+Coarse-grained Monte Carlo simulations resolved the phytate--oleosin
+interaction at the molecular scale.  The N-terminal arm of
+\textit{Cannabis sativa} oleosin (UniProt~A0A803P977; sequence
+\texttt{MKSFLPESGPSAQQ}) was represented at one bead per residue with the
+CALVADOS~3 model~\cite{Tesei2023}.  Fifty such chains were end-grafted to
+one wall of a rectangular slit ($130\times130\times200$\,\AA$^{3}$,
+periodic in $x$ and $y$) at a surface density of
+$3\times10^{-3}$\,\AA$^{-2}$, forming a brush that represents the
+oleosin-covered oil-body surface~\cite{Tzen1992}.  A single phytate
+molecule (\textit{myo}-inositol hexakisphosphate) was modelled as a rigid
+seven-bead unit: one inositol centre and six phosphate groups in the chair
+geometry.  Beads interacted through the Ashbaugh--Hatch
+potential~\cite{Ashbaugh2008} and a screened Coulomb (Debye--H\"uckel) term
+set by the salt concentration, with phytate--peptide cross-interactions
+made purely repulsive to suppress spurious hydrophobic attraction.  The
+solvent entered implicitly through the dielectric permittivity of water at
+298.15\,K.
+
+Peptide and phytate both titrated with pH.  The ionisable peptide groups
+(Glu, Lys, and the two chain termini) and all twelve phytate protons
+exchanged with an implicit proton bath ($a_{\mathrm{H}^+}=10^{-\mathrm{pH}}$)
+through atom-type and molecular swap moves in the semi-grand canonical
+ensemble~\cite{SmithTriska1994}, with p$K_\mathrm{a}$ values taken from
+potentiometric titrations~\cite{Grimsley2009,DeStefano2003}.  Configurations
+were sampled by Metropolis Monte Carlo in Faunus~\cite{Stenqvist2013} using
+translation, rotation, and pivot moves, at pH~4.0, 6.0, 7.0, and 10.0 and
+ionic strengths of 5--150\,mM NaCl.
+
+The free energy of phytate as a function of distance from the brush was
+obtained by umbrella sampling along the inositol $z$-coordinate, using 40
+overlapping windows that spanned the grafted wall to the slit centre.  A
+harmonic drive first steered the molecule into each window, the bias was
+then removed for production sampling, and neighbouring windows were combined
+through their histogram overlap.  This potential of mean force is reported
+against $r$, the distance from the grafted wall, and referenced to zero in
+the bulk.  The same simulations also yielded the mean phytate charge, its
+rotational mean-square displacement (a relative measure of rotational
+mobility), and the laterally averaged electric potential $\varphi(r)$, from
+which a $\zeta$-potential was estimated as $\varphi$ at the outer edge of the
+grafted charge.  Finally, the rotational and translational diffusion
+coefficients of free phytate were estimated for each protonation state from
+RDKit conformer ensembles~\cite{RDKit} using Rotne--Prager--Yamakawa bead
+hydrodynamics~\cite{Zuk2018}.
+
+\bigskip
+\hrule
+\bigskip
+\noindent\textit{Detailed working notes follow.}
+
 \section{System}
 
 We model the N-terminal arm of \textit{Cannabis sativa} oleosin
@@ -117,7 +168,7 @@ For phytate--amino acid cross-pairs, the Ashbaugh--Hatch
 $\lambda$ parameter is set to zero (purely repulsive WCA) to avoid
 artefacts from arithmetic $\lambda$-mixing between hydrophobic amino
 acids and the non-hydrophobic phytate beads.  The Coulomb interaction
-is inherited from the default via the \texttt{extend} policy.
+is inherited from the default via the \texttt{append} policy.
 
 Intramolecular nonbonded pairs separated by one bond are excluded
 (\texttt{excluded\_neighbours:~1}).  All intramolecular pairs within
@@ -149,9 +200,9 @@ sweep:
 The potential of mean force (PMF) for phytate as a function of
 distance from the brush surface is computed using multi-walker
 umbrella sampling with hard-wall windows.  The collective variable
-is the $z$-position of the INO bead, spanning the full slit
-$[-L_z/2, +L_z/2]$ with 20\,\AA\ wide windows and 10\,\AA\ spacing
-(50\% overlap).
+is the $z$-position of the INO bead, spanning the half slit from the
+grafted wall to the box centre, $[-L_z/2, 0]$, with 40 windows
+6\,\AA\ wide and $\approx 2.4$\,\AA\ apart (strongly overlapping).
 
 Each window starts from a common equilibrated state.  A harmonic
 drive phase ($k_\text{drive} = 5.0$\,kJ\,mol$^{-1}$\,\AA$^{-2}$)
@@ -166,9 +217,9 @@ Adjacent-window histograms are stitched via the overlap-ratio method:
 where $f_i$ is the fraction of samples in window $i$ that fall within
 the overlap region with window $i{+}1$.
 
-PMFs are computed at pH~4, 7, and 10 with ionic strengths
-$I = 0.03$\,M and $0.15$\,M NaCl to probe the interplay of
-electrostatic screening and charge regulation.
+PMFs are computed at pH~4, 6, 7, and 10 and ionic strengths
+$I = 0.005$, $0.03$, and $0.15$\,M NaCl (5--150\,mM) to probe the
+interplay of electrostatic screening and charge regulation.
 
 \bibliographystyle{unsrt}
 \bibliography{references}
