@@ -46,7 +46,8 @@ from plot_pmf import (  # noqa: E402
     ph_from_name,
 )
 
-HERE = Path(__file__).parent
+# The MC-output CSVs (shape, rotational mobility) live with the simulation in ../mc.
+MC = Path(__file__).resolve().parent.parent / "mc"
 
 
 def fitted_pmf(run_dir: Path, window: float = 10.0):
@@ -61,8 +62,8 @@ def fitted_pmf(run_dir: Path, window: float = 10.0):
 
 def load_profiles(ionic: float):
     """Collect {pH: dict of aligned r-profiles} for one ionic strength."""
-    shape = pd.read_csv(HERE / "polymer_shape.csv")
-    msd = pd.read_csv(HERE / "rotational_msd.csv")
+    shape = pd.read_csv(MC / "polymer_shape.csv")
+    msd = pd.read_csv(MC / "rotational_msd.csv")
     shape["Swall"] = (3 * shape.Szz / (shape.Sxx + shape.Syy + shape.Szz) - 1) / 2
 
     out = {}
