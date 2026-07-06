@@ -33,8 +33,9 @@ mc/                     Faunus MC simulation + analysis
   peptide_density_z.py  peptide number density along z from an XTC trajectory
   analysis.ipynb        merge the extracted CSVs and plot per condition
   runs/                 simulation output (large files git-ignored)
-diffusion/              free-phytate hydrodynamics (RDKit conformers + PyGRPY)
-  rotational_diffusion.py
+nmr/                    NMR binding bridge + free-phytate hydrodynamics
+  nmr_binding_bridge.py
+  rotational_diffusion.py (RDKit conformers + PyGRPY)
 latex/                  manuscript
 pyproject.toml          uv project (dependencies + ruff config)
 ```
@@ -84,7 +85,7 @@ Rotational and translational diffusion of free phytate across protonation states
 from RDKit conformers and PyGRPY bead hydrodynamics:
 
 ```bash
-uv run diffusion/rotational_diffusion.py      # -> diffusion/diffusion.csv
+uv run nmr/rotational_diffusion.py      # -> nmr/diffusion.csv
 ```
 
 Gives τ_r ≈ 140–165 ps (near-isotropic tumbler). This is a bare-hydrodynamic
