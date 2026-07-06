@@ -35,5 +35,6 @@ extend-include = ["*.ipynb"]  # lint and format Jupyter notebooks too
 select = ["E", "F", "I", "UP", "B"]  # pycodestyle, pyflakes, isort, pyupgrade, bugbear
 
 [tool.ruff.lint.per-file-ignores]
-# Notebooks are exploratory: tolerate unused vars, loop-var reuse, and un-strict zip.
-"*.ipynb" = ["F841", "B020", "B905"]
+# Notebooks are exploratory: tolerate unused vars, loop-var reuse, un-strict zip,
+# throwaway lambdas, physics `I` (ionic strength), long print lines, import order.
+"*.ipynb" = ["F841", "B020", "B905", "E731", "E741", "E501", "I001"]

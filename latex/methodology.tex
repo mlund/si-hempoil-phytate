@@ -84,7 +84,7 @@ in $xy$, hard walls at $z = \pm 100$\,\AA).  Grafting is realised by
 a harmonic tether on the anchor bead at $z_0 \approx -100$\,\AA\ with
 $k = 0.5$\,kJ\,mol$^{-1}$\,\AA$^{-2}$.
 
-\section{Peptide titration}
+\section{Peptide titration}\label{sec:peptitration}
 
 Four residue types undergo pH-dependent protonation via atom-type swap
 moves with implicit protons ($a_{\text{H}^+} = 10^{-\text{pH}}$).
@@ -211,9 +211,9 @@ for unbiased production sampling.  Per-window states are saved for
 restart.
 
 Adjacent-window histograms are stitched via the overlap-ratio method:
-\[
+\begin{equation}
 \Delta F_{i \to i+1} = -k_BT \ln \frac{f_i}{f_{i+1}}
-\]
+\end{equation}
 where $f_i$ is the fraction of samples in window $i$ that fall within
 the overlap region with window $i{+}1$.
 
@@ -253,10 +253,10 @@ rotation contributes its squared angular step, and the mean-square angular
 displacement per attempted move, $\langle\Delta\theta^2\rangle$, is accumulated
 for every protonation state and pooled.  The ratio of this quantity to its bulk
 value gives a rough rotational-diffusion profile,
-\[
+\begin{equation}
 \frac{D(r)}{D_0} \approx
 \frac{\langle\Delta\theta^2\rangle(r)}{\langle\Delta\theta^2\rangle_\text{bulk}},
-\]
+\end{equation}
 where the bulk reference is the mean over the windows nearest the box centre.
 Monte Carlo steps carry no physical time scale, so only the relative profile
 $D(r)/D_0$ is meaningful; it measures how strongly the brush hinders phytate
@@ -267,9 +267,9 @@ tumbling on approach.
 The electric-potential analysis records the laterally averaged charge density
 $\sigma(z)$ in each slab alongside the mean electrostatic potential, the
 screened sum
-\[
+\begin{equation}\label{eq:phi}
 \varphi(z) = \frac{2\pi l_B}{\kappa}\sum_{z'}\sigma(z')\,e^{-\kappa|z-z'|},
-\]
+\end{equation}
 with $l_B$ the Bjerrum length and $1/\kappa$ the Debye length of the medium, so
 that $\varphi\to0$ in the bulk.  We identify the hydrodynamic shear plane with
 the outer edge of the fixed brush charge --- the largest $r$ at which the
@@ -279,6 +279,238 @@ there.  The sign and
 pH-dependence of this estimate are robust, whereas its magnitude depends on the
 choice of shear plane ($\varphi$ is several-fold larger read inside the brush)
 and on the planar, single-peptide geometry.
+
+\section{Adsorption isotherm from the PMF (generalised van der Waals theory)}
+
+The potential of mean force is the wall potential of classical adsorption
+theory, so the amount of phytate accumulated at the brush follows without
+further simulation from the generalised van der Waals (gvdW) treatment of a
+fluid against an attractive wall~\cite{Nordholm2018}.  The Henry (zero-coverage)
+adsorption constant is the surface excess per unit bulk density,
+\begin{equation}\label{eq:KH}
+K_\text{H} = \int_0^\infty\!\big(e^{-w(r)/k_BT}-1\big)\,dr,
+\end{equation}
+which is the Boltzmann-weighted surface excess of phytate at the wall, with
+$w(r)$ the referenced PMF; at $I=0.15$\,M it grows from $133$ to $220$\,\AA\ between pH~4
+and~7 and turns negative (net depletion) at pH~10.  The adsorbed molecules,
+however, are neither dilute nor point-like: phytate is disk-shaped
+($C_p\approx0.94$) with an excluded diameter $d\approx2a_\text{H}\approx11$\,\AA\
+taken from the hydrodynamic radius, and it carries a large like charge.  Both
+effects enter through the two-dimensional gvdW adsorption
+isotherm~\cite{Nordholm2018}, which relates the areal excess $\Gamma$ to the
+Henry excess $\Gamma_\text{HA}=K_\text{H}\,n_B$ ($n_B$ the bulk phytate
+density),
+\begin{equation}\label{eq:isotherm}
+\Gamma = \Gamma_\text{HA}\,(1-\Gamma d^2)\,
+         \exp\!\Big(\frac{2\hat a_2\,\Gamma}{k_BT}
+                    -\frac{\Gamma d^2}{1-\Gamma d^2}\Big).
+\end{equation}
+The two terms in the exponent are the lateral corrections to Henry's law.  The
+hard-disk term $-\Gamma d^2/(1-\Gamma d^2)$ excludes area as the disks crowd,
+while $2\hat a_2\Gamma/k_BT$ is the Boltzmann factor of the mean-field energy of
+one adsorbed molecule in the field of the rest of the layer at coverage
+$\Gamma$.  The coefficient $\hat a_2$ is the gvdW binding-energy integral,
+$\hat a_2 = -\tfrac12\int_d^\infty 2\pi r\,u(r)\,dr$, evaluated here for a
+screened-Coulomb (Yukawa) repulsion between two phytate molecules of valence
+$z$,
+\begin{equation}\label{eq:a2}
+\frac{u(r)}{k_BT} = \frac{z^2 l_B}{r}\,e^{-\kappa r}
+\quad\Longrightarrow\quad
+\frac{\hat a_2}{k_BT} = -\frac{\pi z^2 l_B}{\kappa}\,e^{-\kappa d},
+\end{equation}
+where $l_B$ is the Bjerrum length and $1/\kappa$ the Debye length; the $2\pi r$
+area element cancels the $1/r$ of the potential, giving the closed form.  Since
+$\Gamma$ appears on both sides, the isotherm is implicit and is solved
+self-consistently by iteration.  In the coverage $\theta=\Gamma d^2$ it reads
+$\theta = K_\text{H}n_B d^2(1-\theta)\exp\!\big(\alpha\theta-\theta/(1-\theta)\big)$
+with $\alpha = 2\hat a_2/(k_BT d^2)$, the form iterated here.  The valence
+$z(\text{pH})$ is read from the
+simulated phytate charge ($-5.9$, $-7.1$, $-8.7$, $-10.5$ at pH~4, 6, 7, 10), so
+$\hat a_2\propto z^2$ scales the self-repulsion of the adsorbed layer with
+protonation.  The framework carries
+no fitted binding constant: $K_\text{H}$ comes from the PMF, $d$ from the
+hydrodynamic model, and $\alpha$ from the phytate charge and salt.  The bound
+fraction sensed by the $^{31}$P NMR relaxation then follows from the coverage
+and the oil-body specific surface area $a=6\phi_\text{OB}/d_{43}$ as
+$f_\text{bound} = \Gamma\,a/n_B$, reducing to the Henry limit $a K_\text{H}$ at
+low coverage.
+
+\section{Results: the simulations account for the \texorpdfstring{$^{31}$P}{31P} relaxation}
+
+The $^{31}$P relaxation reports how fast phytate reorients, and the gvdW
+analysis of the PMF predicts what fraction of phytate the brush binds and
+thereby slows.  Combining the two tests the simulated adsorption mechanism
+against the spectroscopy without a fitted binding constant.
+
+At each pH the spectra show a single, population-averaged $^{31}$P resonance
+rather than separate bound and free peaks, with no shift between the free and
+oil-body samples.  The shallow PMF well ($\sim2.6\,k_BT$ at $I=0.15$\,M) gives
+sub-millisecond residence times---far shorter than the relaxation decay---which
+places the system in the fast-exchange limit, where a single rate is measured:
+\begin{equation}\label{eq:twosite}
+\Delta R_\text{obs} = f_\text{bound}\,\Delta R_\text{bound}
+                    + (1-f_\text{bound})\,\Delta R_\text{free},
+\end{equation}
+where $\Delta R = R_{1\rho}-R_1$ isolates the slow reorientation
+(Eq.~\ref{eq:twosite}).  Two rates are measured at each pH: the mixture rate
+$\Delta R_\text{obs}$ of the OB--PA sample and the free-phytate rate
+$\Delta R_\text{free}$ of the PA$_\text{aq}$ control (Table~\ref{tab:gvdw}).
+The binding signature is their difference
+$\Delta R_\text{obs}-\Delta R_\text{free}$.  Only the fully-bound rate
+$\Delta R_\text{bound}$ is unmeasured, set by the phytate co-tumbling with the
+micron-scale droplet.  The simulation supplies $f_\text{bound}$: at each pH we
+solve the isotherm (Eq.~\ref{eq:isotherm}) for the coverage, using $K_\text{H}$
+(Eq.~\ref{eq:KH}) and $\hat a_2$ (Eq.~\ref{eq:a2}) from the simulations, then
+convert to a bound fraction with $f_\text{bound}=\Gamma a/n_B$.
+
+The bound phytate stays mobile.  Cross-polarisation, which selects rigid
+phosphorus, gave no signal at any pH, so binding does not freeze the molecule.
+The simulations agree: an adsorbed phytate still tumbles at about half its bulk
+rate ($D/D_0\approx0.5$--$0.7$) and takes on only a weak orientational bias
+($S_\text{wall}\approx-0.005$, a slight face-on preference).  This local mobility
+is itself far too fast to raise $\Delta R$; the slow motion that does is the
+overall reorientation of the phytate as it co-tumbles with the micron-scale
+droplet.  The retained local mobility and small residual anisotropy then account
+for the line broadening without a rigid, solid-like state.
+
+The pH dependence discriminates between the bare and the gvdW binding models
+(Table~\ref{tab:gvdw}).  The Henry constant rises from pH~4 to~6, so Henry's law
+alone predicts \emph{more} binding---and a larger $\Delta R$---at pH~6, opposite
+to experiment, where the increase $\Delta R_\text{obs}-\Delta R_\text{free}$ is
+strongest at pH~4.  The lateral repulsion resolves this.  Scaling as $z^2$, it
+crowds the more deprotonated pH-6 layer more strongly (larger $|\alpha|$) and
+suppresses its coverage below that at pH~4.  The gvdW bound fraction
+$f_\text{gvdW}$ then falls from pH~4 to~6, as does the NMR-required $f_\text{req}$,
+matching the calorimetry, which finds the strongest binding at pH~4.  This
+comparison holds at the level of the binding free energy: the screened-Coulomb
+PMF is itself a free energy, so while $K_\text{H}$ maps onto the calorimetric
+$\Delta G$, the enthalpy--entropy split (enthalpy-driven at pH~4, entropy-driven
+at pH~6) is not reliably accessible from it.
+At pH~10 the deprotonated brush repels phytate, $K_\text{H}$ turns negative, and
+the model predicts no binding.  The small residual $\Delta R$ is therefore not a
+binding signature; it likely reflects differences in microviscosity and ionic
+strength between the emulsion and the buffer control, consistent with the loss
+of specific binding seen by $\zeta$-potential and calorimetry.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}c ccccc c ccc@{}}
+\toprule
+ & \multicolumn{5}{c}{Simulation (gvdW, $I=0.15$\,M)} & &
+   \multicolumn{3}{c}{$^{31}$P relaxation} \\
+\cmidrule(lr){2-6}\cmidrule(lr){8-10}
+pH & $z$ & $K_\text{H}$/\AA & $\alpha$ & $f_\text{H}$/\% & $f_\text{gvdW}$/\% & &
+ $\Delta R_\text{free}$ & $\Delta R_\text{obs}$ & $f_\text{req}$/\% \\
+\midrule
+4  & $-5.9$  & $133$ & $-29$ & $1.3$ & $0.56$ & & $162$ & $559$ & $1.3$  \\
+6  & $-7.1$  & $170$ & $-41$ & $1.7$ & $0.53$ & & $130$ & $430$ & $1.0$  \\
+10 & $-10.5$ & $-27$ & $-90$ & $-$   & $0$    & & $5$   & $52$  & $0.16$ \\
+\bottomrule
+\end{tabular}
+\caption{Simulation and NMR quantities entering the two-site analysis
+  (Eq.~\ref{eq:twosite}) for the $50\%$ oil-body sample.  From the simulations:
+  phytate valence $z$, Henry constant $K_\text{H}$ (Eq.~\ref{eq:KH}), lateral
+  coefficient $\alpha$ (Eq.~\ref{eq:a2}), the Henry bound fraction
+  $f_\text{H}=aK_\text{H}$, and the gvdW bound fraction $f_\text{gvdW}$ from the
+  solved isotherm (Eq.~\ref{eq:isotherm}).  At pH~10 $K_\text{H}<0$ (net
+  depletion), so no bound fraction is defined.  Measured rates
+  $\Delta R_\text{free}$ (PA$_\text{aq}$ control) and $\Delta R_\text{obs}$
+  (OB--PA), in s$^{-1}$; $f_\text{req}$ is the bound fraction the two-site model
+  requires at $\Delta R_\text{bound}=3\times10^{4}$\,s$^{-1}$.}
+\label{tab:gvdw}
+\end{table}
+
+Two further observations support the model.  The bound fraction scales with the
+oil-body surface area, rising about fivefold between the $10\%$ and $50\%$
+emulsions, which tracks the concentration-dependent line broadening.  Matching
+the absolute $\Delta R$ requires $\Delta R_\text{bound}\approx3$--$7\times10^{4}$
+\,s$^{-1}$, an order-of-magnitude estimate consistent with phytate co-tumbling
+with a micron-scale droplet, together with an accessible oleosin concentration
+of roughly $0.3$\,mM---the same order as the surface protein content of the
+cream.  The model reproduces the ordering
+and magnitude of the relaxation, though it underestimates the pH~4--to--6 gap,
+which likely also carries a protonation dependence of $\Delta R_\text{bound}$
+that the fixed end-point treatment omits.
+
+\section{Analytical Gouy--Chapman binding model (ITC)}
+
+Comparing the isotherm to the calorimetry does not in fact require the simulated
+PMF at all.  Because the phytate--brush attraction and the phytate--phytate
+repulsion are both electrostatic, a single Gouy--Chapman description of the
+charged peptide layer fixes $K_\text{H}$ and $\hat a_2$ together, self
+consistently, from one parameter: the peptide surface charge density
+$\sigma_\text{s}$ (its coverage times its charge).  This removes the tension of
+the previous section---using the bulk Debye length for $K_\text{H}$ while
+screening $\hat a_2$ locally is inconsistent, since the free-energy minimum lies
+inside the brush and the same screening acts on both.
+
+The surface potential follows from the Grahame equation, and the potential
+profile from the planar Poisson--Boltzmann solution,
+\begin{equation}\label{eq:grahame}
+y_0 = 2\,\operatorname{arcsinh}\!\Big(\frac{2\pi l_B\sigma_\text{s}}{\kappa}\Big),
+\qquad
+y(x) = 4\,\operatorname{arctanh}\!\big(\tanh(y_0/4)\,e^{-\kappa x}\big),
+\end{equation}
+with $y=e\psi/k_BT$.  The Henry constant is the adsorption integral of the
+$-z_\text{PA}$ anion in this potential, and the lateral coefficient uses the
+surface-enhanced local screening $I_\text{local}=I_\text{bulk}\cosh y_0$,
+\begin{equation}\label{eq:KHgc}
+K_\text{H} = \int_{x_0}^\infty\!\big(e^{-z_\text{PA} y(x)}-1\big)\,dx,
+\qquad
+\hat a_2(\sigma_\text{s}) = -\frac{\pi z^2 l_B}{\kappa_\text{local}}\,
+                            e^{-\kappa_\text{local} d},
+\end{equation}
+where $x_0\approx a_\text{H}$ is the closest phytate approach and
+$\kappa_\text{local}^2\propto I_\text{local}$.  Both quantities share the same
+$y_0$, so screening is applied consistently.  The phytate valence $z_\text{PA}$
+is known from its titration, leaving $\sigma_\text{s}$ and the bulk ionic
+strength $I$ as the only inputs.
+
+The model has two equivalent one-parameter forms, and either reproduces the pH-4
+thermogram (Fig.~S2C) equally well (RMS $\approx4$, versus $3$ for the one-site
+fit).  Fixing $\sigma_\text{s}$ at the simulated brush value
+($1.35\times10^{-3}\,e$\,\AA$^{-2}$) and fitting the ionic strength returns
+$I\approx7$\,mM, consistent with the $3$\,mM buffer plus counterions.
+Conversely, fixing $I$ at the buffer value ($5$\,mM) and fitting the surface
+charge returns $\sigma_\text{s}\approx1.0\times10^{-3}\,e$\,\AA$^{-2}$, close to
+the brush.  The analytic $K_\text{H}$ also reproduces the simulated value at
+$\sigma_\text{s}=1.9\times10^{-3}\,e$\,\AA$^{-2}$, validating it against the PMF.
+The model thus ties the calorimetry to two independently known quantities---the
+brush charge and the buffer salt---rather than to a fitted binding constant; the
+one-site stoichiometry $n$ is replaced by the physical, charge-limited coverage.
+The residual factor of $\sim\!2$ in the saturation capacity, and the mean-field
+test-charge form of Eq.~\ref{eq:KHgc}, remain the model's approximations.
+
+The analytic and simulated descriptions of the binding are complementary, and
+comparing them locates the limit of each.  The Gouy--Chapman model needs only
+the surface charge density, which the measured $\zeta$-potential fixes through
+the Grahame equation (Eq.~\ref{eq:grahame}) with no fitting; it is therefore the
+natural, experiment-grounded tool for the ITC and for the strongly-charged
+limits---the positive brush binding the anion at pH~4, the negative brush
+repelling it at pH~10.  It cannot, however, describe binding near the oil-body
+isoelectric point.  Taking $\sigma_\text{s}$ from the measured $\zeta$ at each
+pH, the model reproduces the pH-4 attraction and the pH-10 repulsion but
+predicts \emph{no} binding at pH~6, where the net surface charge is already
+slightly negative ($\zeta\approx-12$\,mV); yet both the simulation and the
+$^{31}$P relaxation show clear binding there.  This discrepancy identifies the
+near-isoelectric interaction as \emph{patch}-mediated: phytate ion-pairs with
+the residual cationic residues of the oleosin arms---the lysine and N-terminal
+groups of the peptide titration (Section~\ref{sec:peptitration}), which remain
+protonated---even where the \emph{net} charge is negative.  In multipole terms
+the effect is a \emph{dipole}: the arm carries its cationic N-terminus at the
+outer, phytate-binding edge of the brush and its anionic anchor at the wall, so
+the simulated peptide potential $\varphi_\text{pep}(r)$ (Eq.~\ref{eq:phi}) is
+positive at the binding site ($+8$ to $+15$\,mV across pH~4--7) even when the
+monopole vanishes.  Feeding this local potential, rather than the net-charge
+Grahame estimate, into the mean-charge adsorption integral
+$K_\text{H}=\int(e^{-Q\,e\varphi_\text{pep}/k_BT}-1)\,dr$ recovers binding at all
+of pH~4, 6 and 7 and reproduces the PMF Henry constants at pH~6 and~7
+($180$ and $217$\,\AA\ versus $170$ and $220$\,\AA), while pH~10 stays repulsive.
+The near-isoelectric binding is therefore a dipole effect that the monopole
+(the quantity $\zeta$ reports) misses; charge regulation of the phytate adds only
+a few per cent at $I=0.15$\,M and is neglected.  The NMR pH-series is accordingly
+analysed with the simulated potential, the analytic Gouy--Chapman monopole model
+being reserved for the ITC and the strongly-charged limits.
 
 \bibliographystyle{unsrt}
 \bibliography{references}

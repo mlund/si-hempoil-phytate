@@ -3,10 +3,10 @@
 
 The Faunus slit is centred at z = 0, with the peptide-decorated wall at z = -Lz/2
 and the bulk at the box centre. We work in r = z + Lz/2, the distance from the
-decorated wall (r = 0 at the wall, r ≈ Lz/2 in the bulk). The bulk tail is fit to
-a screened-Coulomb (Yukawa) form
+decorated wall (r = 0 at the wall, r ≈ Lz/2 in the bulk). The brush is a planar
+double layer, so the bulk tail is fit to the planar (Gouy-Chapman) screened form
 
-    PMF(r) = a / r * exp(-r / D) + b
+    PMF(r) = a * exp(-r / D) + b       (not the spherical exp(-r/D)/r)
 
 with the Debye length D fixed by the ionic strength I read from the run name
 (e.g. I0.005). Subtracting the fitted b references the PMF to zero in the bulk,
@@ -54,7 +54,8 @@ def ph_from_name(name: str) -> float:
 
 def box_length_z(output_yaml: Path) -> float:
     """Read Lz, the slit's z-length, from the `cell: !Slit [Lx, Ly, Lz]` block."""
-    lines = output_yaml.read_text().splitlines()
+    # Explicit UTF-8: read_text() would otherwise use the locale default (cp1252 on Windows).
+    lines = output_yaml.read_text(encoding="utf-8").splitlines()
     start = next(i for i, line in enumerate(lines) if line.strip().startswith("cell: !Slit"))
     # The three dimensions follow as a YAML list ("- <value>"); Lz is the third.
     dims = [
@@ -66,17 +67,20 @@ def box_length_z(output_yaml: Path) -> float:
 
 
 def fit_tail(r, pmf, err, debye, window):
-    """Fit PMF(r) = a/r*exp(-r/D) + b over the `window` Å of bulk (largest r).
+    """Fit PMF(r) = a*exp(-r/D) + b over the `window` Å of bulk (largest r).
 
-    With D fixed the model is linear in (a, b), so this is a weighted linear
-    least-squares fit (weights 1/err) — no initial guess needed.
+    The brush is a planar double layer, so the far-field PMF decays as the planar
+    (Gouy-Chapman) screened form exp(-r/D) -- NOT the spherical/point-charge Yukawa
+    exp(-r/D)/r. (The two agree at high salt, where the tail is flat within the
+    window, but differ by ~0.3-0.8 kT in b at low salt where D is large.)
+    With D fixed the model is linear in (a, b): a weighted least-squares fit.
     """
-    # The bulk is the box centre, at the largest sampled r; fit the screened-
-    # Coulomb tail in the `window` Å approaching it, where the Yukawa form holds.
+    # The bulk is the box centre, at the largest sampled r; fit the screened tail
+    # in the `window` Å approaching it.
     mask = r >= r.max() - window
     rw, pmfw, errw = r[mask], pmf[mask], err[mask]
 
-    basis = np.column_stack([np.exp(-rw / debye) / rw, np.ones_like(rw)])
+    basis = np.column_stack([np.exp(-rw / debye), np.ones_like(rw)])
     weights = 1.0 / errw
     coeffs, *_ = np.linalg.lstsq(basis * weights[:, None], pmfw * weights, rcond=None)
     a, b = coeffs
