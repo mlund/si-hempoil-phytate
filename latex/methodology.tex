@@ -512,6 +512,71 @@ a few per cent at $I=0.15$\,M and is neglected.  The NMR pH-series is accordingl
 analysed with the simulated potential, the analytic Gouy--Chapman monopole model
 being reserved for the ITC and the strongly-charged limits.
 
+\section{Correlation-corrected gvdW model of the \texorpdfstring{$\zeta$}{zeta}-potential (Fig.~6)}
+
+The isotherm, the calorimetry and the electrophoretic $\zeta$-potential are three
+views of one adsorption, and a single model rooted in the simulation reproduces
+all three.  The $\zeta$-potential surface of Fig.~6---its dependence on pH,
+phytate concentration and added salt---is the most demanding test, spanning the
+positive brush (pH~4), the near-isoelectric point (pH~6) and the negative brush
+(pH~10).
+
+The model extrapolates the infinite-dilution PMF to finite concentration.  The
+single-phytate well gives the Henry constant (Eq.~\ref{eq:KH}); the
+generalised-van-der-Waals isotherm (Eq.~\ref{eq:isotherm}) then fixes the surface
+excess $\Gamma$ at any bulk concentration.  The emulsion is diluted a
+thousandfold before the $\zeta$ measurement, so the $\zeta$-relevant coverage is
+the isotherm re-equilibrated at $[\text{PA}]/1000$.  It is the same adsorption the
+ITC sees at the preparation concentration, read lower on the isotherm---the
+dilution is the bridge between the two experiments.
+
+Two couplings make the problem self-consistent.  First, the adsorbed anions raise
+the energy of further adsorption, so the effective well shallows as
+$w_\text{eff}(r)=w(r)-z\,\delta y(r)$, with $\delta y$ the extra reduced potential
+they create.  Second, they lower the net surface charge
+$\sigma_\text{net}=\sigma_0-z\Gamma$, which drives the correlation correction
+below.  Both are iterated to convergence.
+
+Mean-field Poisson--Boltzmann cannot reverse the sign of a double layer, yet at
+pH~4 the phytate over-charges the surface---$\zeta$ swings from $+38$ to
+$-4$\,mV.  Charge reversal is a multivalent ion--ion correlation effect, absent
+from both the single-phytate PMF (which contains no phytate--phytate
+correlations) and the mean-field $\hat a_2$.  We restore it following Forsman's
+correlation-corrected Poisson--Boltzmann theory~\cite{Forsman2004}: below the
+nearest-neighbour spacing at which the counterions neutralise the surface,
+\begin{equation}\label{eq:Rc}
+R_c = \sqrt{z_\text{PA}\,/\,(\pi\,|\sigma_\text{net}|)},
+\end{equation}
+the divergent Coulomb repulsion between adsorbed phytates is replaced by its
+tangent at $R_c$ (continuous in value and slope), reducing the mean-field
+over-repulsion so the coverage can exceed neutralisation.  We cap $R_c$ at
+$2/\kappa$, since correlations are screened beyond roughly two Debye lengths; the
+cap also removes the $\sigma_\text{net}\!\to\!0$ singularity, keeping the solution
+stable as the surface passes through neutrality.  The correction adds no
+parameter---$R_c$ follows from the charge the layer must neutralise.
+
+Given the converged coverage, $\zeta$ is read from a \emph{nonlinear}
+Poisson--Boltzmann solve of the adsorbed charge on the simulated potential
+profile, so that the double layer can invert; the linearised response used inside
+the feedback loop cannot.  The phytate valence $z(r)$ is taken from the
+simulation, already regulated by the peptide field, so no separate
+charge-regulation term is added---that would double-count the regulation the PMF
+already contains.
+
+Every ingredient is therefore read from the simulation---the PMF, the potential
+profile, the regulated charge---leaving one fitted quantity: the shear-plane
+position, which the fit places at $r_\text{shear}=26$\,\AA, the PMF binding minimum.
+With that single parameter the model reproduces the whole of Fig.~6A and~6C ($33$
+points across pH, phytate and salt) to an RMS of $5.9$\,mV: the near-isoelectric
+binding at pH~6, the absence of a phytate effect at pH~10, and the salt-driven
+decay of the pH-4 effect (out of sample, the shear plane being fit to 6A only).
+The correlation correction supplies the pH-4 over-charging in trend and
+magnitude, though not the full sign reversal---the coverage feedback uses the
+linearised double layer while $\zeta$ uses the nonlinear one, and the
+$R_c=2/\kappa$ cap limits the softening.  A $\sim\!10$\,mV offset in the pH-10
+bare anchor and a $\sim\!12$\,mV disagreement between Fig.~6A and~6C at pH~6---the
+latter within the experiment itself---are the remaining discrepancies.
+
 \bibliographystyle{unsrt}
 \bibliography{references}
 \end{document}
