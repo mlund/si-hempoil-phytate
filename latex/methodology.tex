@@ -530,6 +530,19 @@ the isotherm re-equilibrated at $[\text{PA}]/1000$.  It is the same adsorption t
 ITC sees at the preparation concentration, read lower on the isotherm---the
 dilution is the bridge between the two experiments.
 
+The two experiments also sit at different ionic strengths, and this reconciles the
+calorimetry with the simulated well.  The undiluted 5\% OB of the ITC cell carries
+oleosin and phospholipid counterions that, with the buffer and the titrated
+phytate, raise the ionic strength to $\approx15$~mM---far above the $3$~mM buffer.
+$K_\text{H}$ is exponentially salt-sensitive (the pH-4 well deepens from $-12$ to
+$-17\,k_BT$ as $I$ drops from $15$ to $5$~mM), so taking $I$ as the buffer value
+would make the simulated binding $\sim\!100\times$ too strong for the thermogram.
+At the cell value the MC isotherm instead reproduces the pH-4 thermogram
+directly---RMS $6.6$~µJ, fitting only $\Delta H$ and the peptide-to-oleosin area,
+not the binding strength---and floating the ionic strength returns $I\approx18$~mM.
+The calorimetry and the simulation agree once the cell, not the buffer, sets the
+salt.
+
 Two couplings make the problem self-consistent.  First, the adsorbed anions raise
 the energy of further adsorption, so the effective well shallows as
 $w_\text{eff}(r)=w(r)-z\,\delta y(r)$, with $\delta y$ the extra reduced potential

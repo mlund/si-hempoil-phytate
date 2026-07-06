@@ -17,12 +17,25 @@ recovered by itc_data), so Ka and dH come out in physical units.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import gc_gvdw as gc
 import itc_data
 import numpy as np
-from scipy.optimize import brentq, curve_fit
+from scipy.optimize import brentq, curve_fit, minimize_scalar
+
+# The MC-grounded correlation-corrected gvdW binding lives in ../zeta.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "zeta"))
+import zeta_ccgvdw as cc  # noqa: E402
 
 NA, D_A = 6.02214076e23, 10.6
+
+# 5% OB in the ITC cell carries oleosin/phospholipid counterions plus the 3 mM
+# buffer and titrated phytate, so the cell ionic strength sits well above the
+# buffer; the MC-grounded thermogram is best fit near here (see fit_cpb_ionic).
+I_ITC = 0.015
+_IMC = (0.005, 0.03, 0.15)  # MC ionic strengths available for PMF interpolation
 
 
 def _dilute(titr: itc_data.Titration) -> tuple[np.ndarray, np.ndarray]:
@@ -130,6 +143,93 @@ def fit_gvdw(titr, mode="fitS", fixed=gc.I_BUFFER):
     return (10 ** popt[0], popt[1], popt[2], rms)
 
 
+# --- MC-grounded correlation-corrected gvdW (cPB) --------------------------------
+def _cpb_coverage(cfree_M: float, ionic: float, pH: float = 4.0, nit: int = 200) -> float:
+    """Self-consistent cPB areal coverage at free phytate ``cfree_M``.
+
+    Binding comes from the correlation-corrected model (K_H from the MC PMF,
+    Forsman-corrected a2); the PMF and potential are interpolated in log-ionic-
+    strength between the simulated values, so the ITC cell ionic strength need not
+    coincide with a simulated one.
+    """
+    imc = np.array(_IMC)
+    j = max(min(int(np.searchsorted(imc, ionic)), len(imc) - 1), 1)
+    lo, hi = imc[j - 1], imc[j]
+    t = (np.log(ionic) - np.log(lo)) / (np.log(hi) - np.log(lo))
+    w_lo, w_hi = cc._pmf(pH, lo), cc._pmf(pH, hi)
+    r_w = w_lo.r.to_numpy()
+    w0 = (1 - t) * w_lo.pmf_kT.to_numpy() + t * w_hi.pmf_kT.to_numpy()
+    z = (1 - t) * cc.phytate_valence(pH, lo) + t * cc.phytate_valence(pH, hi)
+    r = np.linspace(0, 180, 400)
+    y0 = (1 - t) * cc._potential_grid(pH, lo, r) + t * cc._potential_grid(pH, hi, r)
+    sigma_bare = cc.sigma_from_zeta(cc.ZETA_BARE[pH], ionic)
+    u = np.zeros_like(r)
+    gamma = 0.0
+    for _ in range(nit):
+        alpha = cc.lateral_alpha(ionic, z, sigma_bare - z * gamma)
+        w_eff = w0 - z * np.interp(r_w, r, u)
+        gamma += 0.15 * (cc._coverage(np.trapezoid(np.expm1(-w_eff), r_w), cfree_M, alpha) - gamma)
+        excess = np.expm1(-w_eff).clip(0)
+        if excess.sum() == 0:
+            return 0.0
+        excess /= np.trapezoid(excess, r_w)
+        rho = -z * gamma * np.interp(r, r_w, excess, left=0, right=0)
+        u += 0.15 * (cc._linear_shift(rho, y0, ionic, r) - u)
+    return gamma
+
+
+def _cpb_bound(titr, area, grid, cov):
+    """Bound phytate [M] per injection from the interpolated cPB isotherm."""
+    log_grid = np.log(grid)
+
+    def gamma_of(cfree):
+        return np.interp(np.log(cfree), log_grid, cov)
+
+    m_t, l_t = _dilute(titr)
+    out = np.empty_like(l_t)
+    for i, (mt, ltot) in enumerate(zip(m_t, l_t, strict=True)):
+        balance = lambda cf, mt=mt, ltot=ltot: ltot - cf - mt * area * gamma_of(cf)  # noqa: E731
+        out[i] = ltot if balance(1e-15) <= 0 else mt * area * gamma_of(brentq(balance, 1e-15, ltot))
+    return out
+
+
+def fit_cpb(titr, ionic: float = I_ITC):
+    """Fit the MC-grounded cPB isotherm to the raw thermogram at fixed ``ionic``.
+
+    Only the area per oleosin and dH are fit; the binding strength is read from the
+    MC PMF, so this transfers the simulated adsorption to the calorimetry rather
+    than fitting it. Returns (area_A2, dH_kJ, rms_uJ).
+    """
+    grid = np.logspace(-9, -2, 24)
+    cov = np.array([_cpb_coverage(c, ionic) for c in grid])
+
+    def model(x, area, dH):
+        return _heat_uJ(titr, _cpb_bound(titr, area, grid, cov), dH)
+
+    popt, _ = curve_fit(
+        model,
+        titr.mole_ratio,
+        titr.heat_uJ,
+        p0=[3000.0, -40.0],
+        bounds=([50, -1e4], [1e5, 0]),
+        maxfev=20000,
+    )
+    rms = float(np.sqrt(np.mean((titr.heat_uJ - model(titr.mole_ratio, *popt)) ** 2)))
+    return (*popt, rms)
+
+
+def fit_cpb_ionic(titr):
+    """Fit the cPB isotherm with the cell ionic strength free; returns (ionic, area, dH, rms)."""
+    sol = minimize_scalar(
+        lambda log_I: fit_cpb(titr, ionic=10**log_I)[-1],
+        bounds=(np.log10(0.006), np.log10(0.05)),
+        method="bounded",
+        options={"xatol": 0.03},
+    )
+    area, dH, rms = fit_cpb(titr, ionic=10**sol.x)
+    return (10**sol.x, area, dH, rms)
+
+
 if __name__ == "__main__":
     t = itc_data.load(4.0)
     print(
@@ -142,8 +242,19 @@ if __name__ == "__main__":
     f = t.na_fit
     print(f"  NanoAnalyze : Ka={f['Ka']:.3e}/M  n={f['n']:.3f}  dH={f['dH']:.1f} kJ/mol\n")
 
-    s, dHg, cap, rmsg = fit_gvdw(t, mode="fitS", fixed=gc.I_BUFFER)
-    print(f"gvdW (fit sigma_s at I={gc.I_BUFFER * 1e3:.0f} mM):")
+    s, dHg, cap, rmsg = fit_gvdw(t, mode="fitS", fixed=I_ITC)
     print(
-        f"  sigma_s={s:.2e} e/A^2  cap={cap:.2f} PA/oleosin  dH={dHg:.1f} kJ/mol  RMS={rmsg:.1f} uJ"
+        f"gvdW (fit sigma_s at I={I_ITC * 1e3:.0f} mM): sigma_s={s:.2e} e/A^2  "
+        f"cap={cap:.2f}  dH={dHg:.1f} kJ/mol  RMS={rmsg:.1f} uJ\n"
+    )
+
+    area, dHc, rmsc = fit_cpb(t, ionic=I_ITC)
+    print(
+        f"cPB (MC binding, I={I_ITC * 1e3:.0f} mM): area={area:.0f} A^2/oleosin "
+        f"(~{area * 3e-3:.0f} peptide-equiv)  dH={dHc:.1f} kJ/mol  RMS={rmsc:.1f} uJ"
+    )
+    ieff, area2, dH2, rms2 = fit_cpb_ionic(t)
+    print(
+        f"cPB (MC binding, fit I): I={ieff * 1e3:.0f} mM  area={area2:.0f} A^2/oleosin  "
+        f"dH={dH2:.1f} kJ/mol  RMS={rms2:.1f} uJ"
     )
