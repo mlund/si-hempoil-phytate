@@ -23,3 +23,4 @@ CLAUDE.md
 *.out
 *.toc
 __pycache__/
+manus/
