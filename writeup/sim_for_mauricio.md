@@ -16,8 +16,8 @@ Information. Symbols are defined at first use; numbers come from the analysis in
 
 We resolved the phytate–oleosin interaction with coarse-grained Monte Carlo
 simulations. The N-terminal arm of *Cannabis sativa* oleosin (UniProt A0A803P977)
-was modelled one bead per residue with the CALVADOS 3 force field (Tesei &
-Lindorff-Larsen, 2022; Cao et al., 2024) and grafted as a fifty-chain brush to one
+was modelled one bead per residue with the CALVADOS 3 force field (Tesei et al.,
+2021; Cao et al., 2024) and grafted as a fifty-chain brush to one
 wall of a slit, standing in for the oil-body surface. A single phytate molecule,
 represented as a rigid seven-bead unit (one inositol centre, six phosphates),
 titrated all twelve dissociable protons together with the peptide in the
@@ -159,7 +159,7 @@ simulation as the reference.
 
 **System and grafting.** The modelled fragment is the 14-residue N-terminal arm of
 *Cannabis sativa* oleosin (UniProt A0A803P977, sequence MKSFLPESGPSAQQ),
-coarse-grained one bead per residue with CALVADOS 3 (Tesei & Lindorff-Larsen, 2022;
+coarse-grained one bead per residue with CALVADOS 3 (Tesei et al., 2021;
 Cao et al., 2024). Consecutive beads are joined by harmonic bonds (force constant
 80.33 kJ mol⁻¹ Å⁻², equilibrium length 3.8 Å). Fifty chains are grafted at
 $3\times10^{-3}$ Å⁻² onto the bottom wall of a $130\times130\times200$ Å³ slit
@@ -286,8 +286,8 @@ $\zeta$ sample is diluted 1000-fold, so its coverage is the isotherm re-equilibr
 at $[\text{PA}]/1000$.
 
 **Scope and validity.** The mean field captures the regulation feedback but smears the
-adsorbed layer, omitting discrete phytate–phytate correlations (Forsman, 2004;
-Grosberg et al., 2002). Their relative importance is set by the screened
+adsorbed layer, omitting discrete phytate–phytate correlations (Grosberg et al.,
+2002). Their relative importance is set by the screened
 two-dimensional coupling $\Gamma_\text{eff}\approx z^2 l_B\,e^{-\kappa a}/a$, with
 $l_B\approx 7$ Å the Bjerrum length and $a\approx\sqrt{|z|e/|\sigma_0|}$ the
 inter-phytate spacing set by the surface charge $\sigma_0$: mean field is adequate at
@@ -345,8 +345,9 @@ The two-site analysis of the bound fraction, and the simulated versus required
 values, are given in the main text (§3.3.4, Table N). This section details the
 free-tumbling reference $\Delta R_\text{free}$.
 
-A bare-hydrodynamic estimate (RDKit conformer ensembles with Rotne–Prager–Yamakawa
-bead mobilities; Zuk et al., 2018; Waszkiewicz et al., 2023) fixes the reference. The
+A bare-hydrodynamic estimate (RDKit conformer ensembles, Landrum et al., with
+Rotne–Prager–Yamakawa bead mobilities — the GRPY method of Zuk et al., 2018, via the
+PyGRPY package, Waszkiewicz) fixes the reference. The
 rotational correlation time $\tau_r$ and its anisotropy vary little across protonation
 states (Table S-5), so different phytate conformers tumble alike and a single
 $\Delta R_\text{free}$ is well defined. This is a purely **geometric** measure: the
@@ -399,25 +400,38 @@ All simulation input files, modelling and analysis scripts are available at
 
 ## References
 
-- Ashbaugh, H. S., & Hatch, H. W. (2008). *J. Am. Chem. Soc.* **130**, 9536.
-- Cao, F., et al. (2024). CALVADOS 3. [as cited in the manuscript]
-- De Stefano, C., et al. (2003). *J. Chem. Eng. Data* **48**, 114.
-- Delgado, A. V., González-Caballero, F., Hunter, R. J., Koopal, L. K., & Lyklema, J.
-  (2007). Measurement and interpretation of electrokinetic phenomena. *J. Colloid
-  Interface Sci.* **309**, 194–224.
-- Forsman, J. (2004). A simple correlation-corrected Poisson–Boltzmann theory.
-  *J. Phys. Chem. B* **108**, 9236–9245.
+- Ashbaugh, H. S., & Hatch, H. W. (2008). Natively unfolded protein stability as a
+  coil-to-globule transition in charge/hydropathy space. *J. Am. Chem. Soc.* **130**,
+  9536–9542. https://doi.org/10.1021/ja802124e
+- Cao, F., von Bülow, S., Tesei, G., & Lindorff-Larsen, K. (2024). A coarse-grained
+  model for disordered and multi-domain proteins. *Protein Sci.* **33**, e5172.
+  https://doi.org/10.1002/pro.5172
+- De Stefano, C., Milea, D., & Sammartano, S. (2003). Speciation of phytate ion in
+  aqueous solution: protonation constants in tetraethylammonium iodide and sodium
+  chloride. *J. Chem. Eng. Data* **48**, 114–119. https://doi.org/10.1021/je020124m
 - Grahame, D. C. (1947). The electrical double layer and the theory of
   electrocapillarity. *Chem. Rev.* **41**, 441–501.
-- Grimsley, G. R., et al. (2009). *Protein Sci.* **18**, 247.
+  https://doi.org/10.1021/cr60130a002
+- Grimsley, G. R., Scholtz, J. M., & Pace, C. N. (2009). A summary of the measured
+  pK values of the ionizable groups in folded proteins. *Protein Sci.* **18**,
+  247–251. https://doi.org/10.1002/pro.19
 - Grosberg, A. Yu., Nguyen, T. T., & Shklovskii, B. I. (2002). Colloquium: The physics
   of charge inversion in chemical and biological systems. *Rev. Mod. Phys.* **74**,
-  329–345.
-- Stenqvist, B., et al. (2013). Faunus. *Mol. Simul.* **39**, 1233.
-- Tesei, G., & Lindorff-Larsen, K. (2022). CALVADOS. *Open Res. Eur.* **2**, 94.
+  329–345. https://doi.org/10.1103/RevModPhys.74.329
+- Landrum, G., et al. RDKit: Open-source cheminformatics.
+  https://doi.org/10.5281/zenodo.591637
+- Stenqvist, B., Thuresson, A., Kurut, A., Vácha, R., & Lund, M. (2013). Faunus — a
+  flexible framework for Monte Carlo simulation. *Mol. Simul.* **39**, 1233–1239.
+  https://doi.org/10.1080/08927022.2013.828207
+- Tesei, G., Schulze, T. K., Crehuet, R., & Lindorff-Larsen, K. (2021). Accurate model
+  of liquid–liquid phase behavior of intrinsically disordered proteins from
+  optimization of single-chain properties. *Proc. Natl. Acad. Sci. USA* **118**,
+  e2111696118. https://doi.org/10.1073/pnas.2111696118
 - Trefalt, G., Behrens, S. H., & Borkovec, M. (2016). Charge regulation in the
   electrical double layer: ion adsorption and surface interactions. *Langmuir* **32**,
-  380–400.
-- Waszkiewicz, R., et al. (2023). PyGRPY. [hydrodynamic bead mobilities]
-- Zuk, P. J., et al. (2018). Rotne–Prager–Yamakawa mobilities. *J. Fluid Mech.* **831**,
-  R3.
+  380–400. https://doi.org/10.1021/acs.langmuir.5b03611
+- Waszkiewicz, R. PyGRPY: a Python implementation of the generalized
+  Rotne–Prager–Yamakawa bead mobility. https://github.com/RadostW/PyGRPY
+- Zuk, P. J., Cichocki, B., & Szymczak, P. (2018). GRPY: an accurate bead method for
+  calculation of hydrodynamic properties of rigid biomacromolecules. *Biophys. J.*
+  **115**, 782–800. https://doi.org/10.1016/j.bpj.2018.07.015
