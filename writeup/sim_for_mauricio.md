@@ -62,18 +62,18 @@ between adsorbed phytates (scaling as $z^2$ and screened by salt) pushes coverag
 back down. This balance shifts strongly with pH, which sets both the brush charge and
 the phytate valence $z$, and with salt, which screens both interactions. The
 repulsion is why the more highly charged pH-6 layer binds less than the bare
-attraction alone would predict, and it sets how far the surface can be over-charged.
+attraction alone would predict, and it sets how far the surface can be overcharged.
 
-**Acidic binding over-charges the surface — the origin of the $\zeta$ reversal.**
+**Acidic binding overcharges the surface — the origin of the $\zeta$ reversal.**
 At pH 4 the balance tips far enough that phytate adsorbs *past* neutralization:
 each molecule carries $z \approx -7$, so once the adsorbed charge exceeds the bare
 surface charge the sign of the surface charge inverts. This charge inversion
-(over-charging) is the mechanism behind the measured $\zeta$-potential crossing from
+(overcharging) is the mechanism behind the measured $\zeta$-potential crossing from
 $+38$ mV to $-4$ mV as phytate is added (Figure 6A). It is self-limiting: as the
 surface charges negative, the local potential opposes further anion binding, so the
 inversion saturates. The CR-PB model reproduces the crossing (SI §S-3); a
 non-regulating mean-field surface cannot, because it stops binding at neutralization.
-Over-charging is the electrostatic driver of the pH-4 destabilization and oil release.
+Overcharging is the electrostatic driver of the pH-4 destabilization and oil release.
 
 The three measurements then test the same mechanism.
 
@@ -130,7 +130,7 @@ supports a single free-tumbling reference $\Delta R_\text{free}$: free phytate t
 near-isotropically with $\tau_r \approx 134$–$147$ ps and little variation across
 protonation states (SI §S-5).
 
-Two edges of the mean-field treatment are worth stating. It captures the regulation
+The mean-field treatment has two limitations. It captures the regulation
 feedback — binding weakening as the surface charges up — but smears the adsorbed
 layer, so it omits the discrete phytate–phytate correlations that matter at low salt,
 where the double layer is thick relative to the inter-phytate spacing. There the
@@ -140,13 +140,13 @@ cross-check (SI §S-2).
 ## Conclusions (suggested addition)
 
 The simulations and the charge-regulated model give the electrostatic mechanism
-behind the observed behaviour: phytate binding reflects a pH- and salt-dependent
+behind the observed behavior: phytate binding reflects a pH- and salt-dependent
 balance between attraction to the cationic oleosin patch and repulsion within the
-adsorbed phytate layer. At pH 4 this balance tips to **over-charging** — phytate
+adsorbed phytate layer. At pH 4 this balance tips to **overcharging** — phytate
 adsorbs past neutralization and inverts the surface charge — which drives the
 destabilization and oil release. At pH 6 the binding is weaker and salt-screened,
 adding negative charge that stabilizes the emulsion, while at pH 10 direct binding is
-negligible and the double layer governs behaviour. The model reproduces the $\zeta$
+negligible and the double layer governs behavior. The model reproduces the $\zeta$
 reversal, the calorimetric thermogram and the pH order of the NMR binding, and it
 locates its own limits (the NMR magnitude, and low-salt correlations) with the
 simulation as the reference.
@@ -157,18 +157,85 @@ simulation as the reference.
 
 ## §S-1 Monte Carlo simulations (full)
 
-Fifty oleosin N-terminal chains (sequence MKSFLPESGPSAQQ) were end-grafted at
-$3\times10^{-3}\ \text{Å}^{-2}$ to one wall of a $130\times130\times200\ \text{Å}^3$
-slit; the opposite wall was neutral. Beads interacted through the Ashbaugh–Hatch
-potential (Ashbaugh & Hatch, 2008) and a screened-Coulomb term set by the salt, with
-phytate–peptide cross-interactions purely repulsive. The peptide carries four
-titratable groups; phytate carries twelve dissociable protons (two per phosphate),
-giving thirteen charge states from neutral H$_{12}$PA to PA$^{12-}$ with p$K_a$ values
-spanning $\sim 1$–$12$ (De Stefano et al., 2003; Grimsley et al., 2009). Both titrated
-with pH in the semi-grand-canonical ensemble. Umbrella sampling along the inositol
-coordinate (40 windows) gave $w(r)$; the wall-aligned shape analysis gave
-$S_\text{wall}$ (the second-rank orientational order parameter: $0$ isotropic,
+**System and grafting.** The modelled fragment is the 14-residue N-terminal arm of
+*Cannabis sativa* oleosin (UniProt A0A803P977, sequence MKSFLPESGPSAQQ),
+coarse-grained one bead per residue with CALVADOS 3 (Tesei & Lindorff-Larsen, 2022;
+Cao et al., 2024). Consecutive beads are joined by harmonic bonds (force constant
+80.33 kJ mol⁻¹ Å⁻², equilibrium length 3.8 Å). Fifty chains are grafted at
+$3\times10^{-3}$ Å⁻² onto the bottom wall of a $130\times130\times200$ Å³ slit
+(periodic in $x$ and $y$; hard walls at $z=\pm100$ Å) through a harmonic tether on the
+terminal anchor bead (0.5 kJ mol⁻¹ Å⁻²). Water is implicit, entering through the
+temperature-dependent dielectric permittivity at 298.15 K.
+
+**Peptide titration.** Four groups protonate through atom-type swap moves against an
+implicit proton bath ($a_{\text{H}^+}=10^{-\text{pH}}$): Glu (p$K_a$ 4.24), Lys
+(10.4), the N-terminus (8.0) and the C-terminus (3.67) (Grimsley et al., 2009). The
+mean chain charge runs from $\approx +1e$ at pH 4, through $\approx -0.1e$ at pH 7, to
+$\approx -1.3e$ at pH 10 — i.e. the brush passes through its isoelectric region near
+pH 6, exactly where the *net*-charge picture fails but the local cationic patch does
+not (§3.3.4).
+
+**Phytate titration (thirteen charge states — a non-standard scheme).** One phytate
+(*myo*-inositol hexakisphosphate) is a rigid seven-bead unit: one inositol centre
+(INO, diameter 6.2 Å) and six phosphates (PH, 5.8 Å) placed at the crystallographic
+phosphorus positions of the chair conformation ($\approx 4.5$ Å from the ring centre,
+one axial and five equatorial); bead diameters are scaled from CALVADOS 3 as
+$M^{1/3}$. Phytate carries twelve dissociable protons — two per phosphate — giving
+**thirteen charge states** from neutral H₁₂PA to PA¹²⁻. Rather than fixing the charge,
+all twelve dissociations are sampled as **molecular swap moves in the
+semi-grand-canonical ensemble**, with macroscopic p$K_a$ values from potentiometry in
+NaCl (De Stefano et al., 2003): a low-p$K_a$ sextet 1.1, 1.5, 1.7, 2.1, 2.5, 2.9 (the
+first proton on each phosphate) and a higher, spread-out sextet 5.72, 6.28, 6.81,
+7.60, 9.94, 11.84 (the second). This bimodal ladder makes the phytate valence climb
+steeply with pH ($z\approx-6$ at pH 4 to $\approx-10.6$ at pH 10). It also straddles
+the experimental window, so phytate is itself charge-regulated as it approaches the
+brush. The net charge is spread uniformly over the six phosphate beads. Crucially, all
+thirteen states share the same seven-bead geometry, so a swap move changes only the
+charge, **preserving the molecule's position and orientation through gyration-tensor
+alignment**. A single phytate therefore explores its full protonation manifold without
+the geometric bias a fixed-charge model would impose.
+
+**Interactions.** Nonbonded pairs combine the Ashbaugh–Hatch potential (short-range,
+hydrophobicity-scaled; Ashbaugh & Hatch, 2008) with a screened-Coulomb (Debye–Hückel)
+term set by the salt. Phytate–peptide cross-pairs use $\lambda=0$ (purely repulsive
+WCA) to suppress a spurious hydrophobic attraction that arithmetic $\lambda$-mixing
+between hydrophobic amino acids and the non-hydrophobic phytate would otherwise
+introduce. Bonded neighbors and all intramolecular phytate pairs are excluded.
+
+**Monte Carlo moves.** Per sweep, Faunus (Stenqvist et al., 2013) applies: peptide
+translation in $xy$ ($\delta_\text{max}$ 10 Å) and phytate translation along $z$
+(5 Å, 20 repeats); peptide pivot rotation (0.5 rad) and phytate rigid rotation
+(1.0 rad); and speciation (molecular swap) for the twelve phytate and four peptide
+reactions (10 repeats per draw).
+
+**Potential of mean force.** The PMF along the inositol $z$-coordinate is obtained by
+multi-walker umbrella sampling with 40 hard-wall windows (6 Å wide, $\approx 2.4$ Å
+apart, strongly overlapping) spanning the grafted wall to the slit centre. A harmonic
+drive (5.0 kJ mol⁻¹ Å⁻²) steers phytate into each window before the bias is removed
+for unbiased production; adjacent windows are stitched by the overlap ratio
+$\Delta F_{i\to i+1}=-k_BT\ln(f_i/f_{i+1})$, with $f_i$ the fraction of window-$i$
+samples falling in the $i/i{+}1$ overlap. PMFs were computed at pH 4, 6, 7 and 10 and
+$I=0.005$, 0.03 and 0.15 M (the paper analyses 4, 6, 10 against experiment; pH 7 is an
+additional simulated intermediate).
+
+**Position-resolved rotational mobility.** $D(r)/D_0$ is read from the Monte Carlo
+rotations themselves: the mean accepted squared angular step per attempted move,
+$\langle\Delta\theta^2\rangle(r)$, normalized to its bulk value near the box centre.
+Monte Carlo carries no time scale, so only this relative profile is meaningful — it
+measures how strongly the brush hinders phytate tumbling on approach. The
+disk-shaped phytate also takes only a weak orientational bias at the wall
+($S_\text{wall}\approx-0.005$, the second-rank order parameter: $0$ isotropic,
 $-\tfrac12$ face-on, $+1$ edge-on).
+
+**Electric potential.** The laterally averaged slab charge $\sigma(z)$ gives the
+screened-sum potential
+
+$$\varphi(z)=\frac{2\pi l_B}{\kappa}\sum_{z'}\sigma(z')\,e^{-\kappa|z-z'|},$$
+
+with $l_B$ the Bjerrum length and $1/\kappa$ the Debye length, referenced to zero in
+bulk. The simulated $\zeta$ is $\varphi$ at the shear plane, taken as the outermost
+$r$ at which the peptide charge $|\sigma(z)|$ has not yet fallen below 2% of its peak
+(the open markers in the composite panel C).
 
 ## §S-2 The charge-regulated Poisson–Boltzmann model
 
@@ -243,7 +310,7 @@ Table S-3a. Intrinsic affinities.
 
 | pH | $K$ / M⁻¹ | binding |
 |----|----------------|---------|
-| 4  | 64             | over-charges (charge inversion) |
+| 4  | 64             | overcharges (charge inversion) |
 | 6  | $2.9\times10^{4}$ | binds, adds negative charge |
 | 10 | 0              | repulsive, no direct binding |
 
@@ -270,7 +337,7 @@ drives adsorption.
 
 ![Simulation composite at $I = 0.03$ M (panels as in the low-salt composite).](../mc/composite_I0.03.png)
 
-![Simulation composite at $I = 0.15$ M.](../mc/composite_I0.15.png)
+![Simulation composite at $I = 0.15$ M. The measured $\zeta$ marker is the highest available salt (100 mM added NaCl); the series does not extend to 150 mM, so it overstates $|\zeta|$ relative to the simulation, which over-screens at high salt.](../mc/composite_I0.15.png)
 
 ## §S-5 Free-phytate hydrodynamics
 

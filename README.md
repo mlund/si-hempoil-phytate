@@ -31,25 +31,36 @@ mc/                     Faunus MC simulation + analysis
   plot_pmf.py           PMF plots, faceted by pH, with a screened-Coulomb tail fit
   extract_data.py       per-window charge & polymer shape + averaged potential
   peptide_density_z.py  peptide number density along z from an XTC trajectory
+  plot_composite.py     salt-resolved MC composites (PMF, potential, charge, mobility)
   analysis.ipynb        merge the extracted CSVs and plot per condition
   runs/                 simulation output (large files git-ignored)
-zeta/                   the gvdW adsorption model (shared by all three probes)
-  zeta_gvdw.py          MC-grounded gvdW isotherm; zeta-potential vs [PA]/[NaCl]
+zeta/                   the MC-grounded adsorption models (shared by all three probes)
+  zeta_gvdw.py          gvdW isotherm; zeta-potential vs [PA]/[NaCl]
+  zeta_crpb.py          charge-regulated Poisson-Boltzmann model (reproduces the
+                        pH-4 zeta reversal; also fits the ITC via fit_itc)
   parse_zeta.py         tidy the measured zeta workbook -> zeta_experimental.csv
 nmr/                    NMR binding bridge + free-phytate hydrodynamics
   nmr_binding_bridge.py
   rotational_diffusion.py (RDKit conformers + PyGRPY)
 itc/                    isothermal titration calorimetry fits
   itc_fit.py            one-site (Wiseman) vs the MC-grounded gvdW isotherm
-latex/                  manuscript
+latex/                  manuscript + methodology working notes
+writeup/                simulation support text for the experimental manuscript
+  sim_for_mauricio.md   Word/ODF draft (main text + SI) to merge into the OB-PA paper
+  build.py              `uv run writeup/build.py` -> .docx + .odt (pandoc)
 pyproject.toml          uv project (dependencies + ruff config)
 ```
 
-The single **gvdW adsorption model** (`zeta/zeta_gvdw.py`) carries the simulated
-phytate PMF to finite concentration and reconciles the calorimetry (ITC),
-ζ-potential and ³¹P NMR: the Henry constant `K_H` and the lateral coefficient `a2`
-(Forsman correlation-corrected) are read from the Monte Carlo, so the binding is
-transferred to each measurement rather than fitted.
+Two **MC-grounded adsorption models** carry the simulated phytate PMF to finite
+concentration and to the measured ζ-potential. The **gvdW** model
+(`zeta/zeta_gvdw.py`) reads the Henry constant `K_H` and the Forsman-corrected
+lateral coefficient `a2` from the Monte Carlo, transferring the binding to the
+calorimetry (ITC), ζ-potential and ³¹P NMR rather than fitting it. The
+**charge-regulated Poisson–Boltzmann** model (`zeta/zeta_crpb.py`) instead lets
+phytate regulate the surface charge, so it reproduces the pH-4 ζ charge reversal
+(overcharging) that mean-field gvdW cannot, at the cost of one intrinsic affinity
+fit per pH. The theory writes up as simulation *support* for the experimental
+manuscript in `writeup/`.
 
 ## Setup
 
@@ -102,6 +113,17 @@ uv run nmr/rotational_diffusion.py      # -> nmr/diffusion.csv
 Gives τ_r ≈ 140–165 ps (near-isotropic tumbler). This is a bare-hydrodynamic
 estimate (stick boundary conditions, no ionic-atmosphere friction); see the
 notebook and script docstring for caveats.
+
+### 4. Adsorption models and the manuscript write-up
+
+```bash
+uv run zeta/zeta_gvdw.py       # gvdW model -> fig_zeta.png + probe numbers
+uv run zeta/zeta_crpb.py       # charge-regulated model -> fig_crpb.png, ../itc/fig_itc_crpb.png
+uv run mc/plot_composite.py    # -> composite_I{0.005,0.03,0.15}.png for the SI
+uv run writeup/build.py        # sim_for_mauricio.md -> .docx + .odt (needs pandoc)
+```
+
+`writeup/build.py --pdf` also renders a PDF proof via LibreOffice (`soffice`).
 
 ## Development
 

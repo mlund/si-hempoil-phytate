@@ -15,6 +15,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
 
@@ -55,14 +56,13 @@ def plot_composite(ionic: float, path: Path) -> None:
         zc = zeta[(zeta.ionic_strength == ionic) & (zeta.pH == pH)].iloc[0]
         axC.plot(zc.r_shear, zc.zeta_mV, "o", mfc="white", mec=c, zorder=5)  # simulated zeta
         e = exp[exp.pH == pH].sort_values("NaCl_mM")
-        if not e.empty and nacl <= e.NaCl_mM.max():  # measured zeta only within range
-            mean = float(
-                pd.Series(e.mean_mV.values, index=e.NaCl_mM.values)
-                .reindex(sorted(set(e.NaCl_mM) | {nacl}))
-                .interpolate()
-                .loc[nacl]
-            )
-            axC.errorbar(zc.r_shear + 4, mean, yerr=0, fmt="s", color=c, capsize=3, zorder=5)
+        if not e.empty:
+            # np.interp clamps beyond the measured range (max 100 mM added NaCl), so the
+            # 150 mM panel shows the highest-salt measured value (the screened plateau).
+            xp = e.NaCl_mM.to_numpy()
+            mean = float(np.interp(nacl, xp, e.mean_mV.to_numpy()))
+            sd = float(np.interp(nacl, xp, e.sd_mV.to_numpy()))
+            axC.errorbar(zc.r_shear + 4, mean, yerr=sd, fmt="s", color=c, capsize=3, zorder=5)
 
         q = _sel(chg[chg.selection == "atomtype INO"], ionic, pH)
         axD.plot(q.r, q.charge, color=c, marker="o", ms=3, lw=1)
