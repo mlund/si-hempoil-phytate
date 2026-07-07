@@ -49,6 +49,7 @@ import numpy as np
 import pandas as pd
 from scipy import constants
 from scipy.integrate import solve_bvp
+from scipy.interpolate import PchipInterpolator
 from scipy.linalg import solve_banded
 from scipy.optimize import brentq
 
@@ -189,22 +190,64 @@ def _linear_shift(rho: np.ndarray, y0: np.ndarray, ionic: float, r: np.ndarray) 
     return solve_banded((1, 1), ab, b)
 
 
-def _shear_plane(pH, ionic, z, gamma, well_shape, r_w, threshold=0.02):
-    """Fixed-charge edge of the *total* interfacial charge (the Fig 1C rule, self-consistent).
+def _ionic_bracket(ionic: float):
+    """(lo, hi, t) for log-interpolating MC profiles between the bracketing simulated ionics."""
+    imc = IONIC_MC
+    if ionic <= imc[0]:
+        return imc[0], imc[0], 0.0
+    if ionic >= imc[-1]:
+        return imc[-1], imc[-1], 0.0
+    j = int(np.searchsorted(np.asarray(imc), ionic))
+    lo, hi = imc[j - 1], imc[j]
+    return lo, hi, (np.log(ionic) - np.log(lo)) / (np.log(hi) - np.log(lo))
+
+
+def _pmf_interp(pH: float, ionic: float):
+    """(r_w, w0) PMF at arbitrary ionic, log-interpolated between MC ionics (nonel well in)."""
+    lo, hi, t = _ionic_bracket(ionic)
+    wl = _pmf(pH, lo)
+    r_w, w_lo = wl.r.to_numpy(), wl.pmf_kT.to_numpy()
+    if t == 0.0:
+        return r_w, w_lo
+    wh = _pmf(pH, hi)
+    return r_w, (1 - t) * w_lo + t * np.interp(r_w, wh.r.to_numpy(), wh.pmf_kT.to_numpy())
+
+
+def _valence_interp(pH: float, ionic: float) -> float:
+    lo, hi, t = _ionic_bracket(ionic)
+    return (1 - t) * phytate_valence(pH, lo) + t * phytate_valence(pH, hi)
+
+
+def _potential_interp(pH: float, ionic: float, r: np.ndarray) -> np.ndarray:
+    lo, hi, t = _ionic_bracket(ionic)
+    yl = _potential_grid(pH, lo, r)
+    return yl if t == 0.0 else (1 - t) * yl + t * _potential_grid(pH, hi, r)
+
+
+def _sigma_peptide(pH: float, ionic: float):
+    """(r_p, sigma_peptide) MC peptide slab charge at arbitrary ionic, interpolated in ionic."""
+    lo, hi, t = _ionic_bracket(ionic)
+    p = _table("potential.csv")
+    pl = p[(p.ionic_strength == lo) & (p.pH == pH)].sort_values("r")
+    r_p, s_lo = pl.r.to_numpy(), pl.sigma_peptide_e_A2.to_numpy()
+    if t == 0.0:
+        return r_p, s_lo
+    ph = p[(p.ionic_strength == hi) & (p.pH == pH)].sort_values("r")
+    return r_p, (1 - t) * s_lo + t * np.interp(
+        r_p, ph.r.to_numpy(), ph.sigma_peptide_e_A2.to_numpy()
+    )
+
+
+def _shear_plane(r_p, sigma_pep, z, gamma, well_shape, r_w, threshold=0.02):
+    """Fixed-charge edge of the total (brush + adsorbed phytate) charge (the Fig 1C rule).
 
     Applies the 2%-of-peak areal-charge rule of mc/extract_data.py::shear_zeta to the
-    total fixed charge -- the MC peptide slab charge plus the self-consistent adsorbed
-    phytate (areal density `gamma`, distributed as `well_shape`). The phytate term
-    makes the shear plane depend on [PA] through the coverage. Returns the outermost
-    brush-side r where |sigma_total| exceeds `threshold` of its peak.
+    MC peptide slab charge `sigma_pep` (grid `r_p`) plus the self-consistent adsorbed
+    phytate (areal density `gamma`, distributed as `well_shape`), so the shear plane
+    depends on [PA] through the coverage. Returns the outermost brush-side r where
+    |sigma_total| exceeds `threshold` of its peak.
     """
-    p = _table("potential.csv")
-    p = p[(p.ionic_strength == ionic) & (p.pH == pH)].sort_values("r")
-    r_p = p.r.to_numpy()
-    sigma_pep = p.sigma_peptide_e_A2.to_numpy()
     dr_p = r_p[1] - r_p[0]
-    # Adsorbed phytate as a per-bin areal charge on the peptide grid: the total
-    # -z*gamma [e/A^2] shared out by well_shape (which integrates to 1 over r).
     phytate = -z * gamma * np.interp(r_p, r_w, well_shape, left=0.0, right=0.0) * dr_p
     sig_tot = np.abs(sigma_pep + phytate)
     brush = (r_p < r_p.max() / 2) & (sig_tot > threshold * sig_tot.max())
@@ -221,30 +264,31 @@ def adsorb(pH: float, ionic: float, pa_M: float, gamma0: float = 0.0):
     (Eq 12). The feedback loop uses the cheap linear double layer; the returned u(r)
     is then recomputed from the nonlinear Poisson-Boltzmann equation so that zeta can
     invert. The shear plane is the fixed-charge edge of the total (brush + adsorbed
-    phytate) charge, so it moves inward as phytate loads.
+    phytate) charge, so it moves inward as phytate loads. All MC inputs are
+    log-interpolated in ionic strength, so `ionic` need not be a simulated value.
     """
-    w = _pmf(pH, ionic)
-    r_w, w0 = w.r.to_numpy(), w.pmf_kT.to_numpy()
-    z = phytate_valence(pH, ionic)
-    sigma_pep = sigma_from_zeta(ZETA_BARE[pH], ionic)  # pH-dependent peptide surface charge
+    r_w, w0 = _pmf_interp(pH, ionic)
+    z = _valence_interp(pH, ionic)
+    sigma_wall = sigma_from_zeta(ZETA_BARE[pH], ionic)  # pH-dependent bare surface charge, for R_c
+    r_p, sig_pep = _sigma_peptide(pH, ionic)
     r = np.linspace(0, 180, 400)
-    y0 = _potential_grid(pH, ionic, r)
+    y0 = _potential_interp(pH, ionic, r)
     u = np.zeros_like(r)
     gamma, well_shape = gamma0, np.zeros_like(r_w)
     for _ in range(300):
-        alpha = lateral_alpha(ionic, z, gamma, sigma_net=sigma_pep - z * gamma)
+        alpha = lateral_alpha(ionic, z, gamma, sigma_net=sigma_wall - z * gamma)
         w_eff = w0 - z * np.interp(r_w, r, u)
         k_henry = np.trapezoid(np.expm1(-w_eff), r_w)
         gamma += 0.15 * (_coverage(k_henry, pa_M, alpha) - gamma)
         excess = np.expm1(-w_eff).clip(0)
         if excess.sum() == 0:  # repulsive well: no binding, bare fixed-charge edge
-            return 0.0, r, np.zeros_like(r), _shear_plane(pH, ionic, z, 0.0, well_shape, r_w)
+            return 0.0, r, np.zeros_like(r), _shear_plane(r_p, sig_pep, z, 0.0, well_shape, r_w)
         well_shape = excess / np.trapezoid(excess, r_w)
         rho = -z * gamma * np.interp(r, r_w, well_shape, left=0, right=0)
         u += 0.15 * (_linear_shift(rho, y0, ionic, r) - u)
 
     rg, u_nl = _nonlinear_shift(pH, ionic, z, gamma, well_shape, r_w, r, y0, u)
-    return gamma, rg, u_nl, _shear_plane(pH, ionic, z, gamma, well_shape, r_w)
+    return gamma, rg, u_nl, _shear_plane(r_p, sig_pep, z, gamma, well_shape, r_w)
 
 
 def _nonlinear_shift(pH, ionic, z, gamma, well_shape, r_w, r, y0, u_guess):
@@ -319,7 +363,8 @@ def _bare_zeta(pH: float, ionic: float) -> float:
     )
     y = sol.sol(rg)[0] if sol.success else np.zeros_like(rg)
     r_w = _pmf(pH, ionic).r.to_numpy()
-    r_shear = _shear_plane(pH, ionic, 1.0, 0.0, np.zeros_like(r_w), r_w)  # gamma=0 -> bare edge
+    r_p, sig_pep = _sigma_peptide(pH, ionic)
+    r_shear = _shear_plane(r_p, sig_pep, 1.0, 0.0, np.zeros_like(r_w), r_w)  # gamma=0 -> bare edge
     return float(np.interp(r_shear, rg, y) * KT_MV)
 
 
@@ -348,17 +393,39 @@ def _profiles_6a():
     return out
 
 
+# Dense ionic grid for the 1.5 mM-PA salt curve, spanning the measured [NaCl] range
+# (0-100 mM added, + 3 mM buffer). The shift is computed at each via input-interpolated
+# adsorption, so the salt curve is smooth rather than a 3-knot interpolation.
+_SALT_GRID = tuple(np.geomspace(0.003, 0.153, 14))
+
+
 @cache
-def _profiles_6c():
-    """Converged (r_grid, u, r_shear) at 1.5 mM PA for each pH and MC ionic strength."""
-    return {
-        (pH, ionic): adsorb(pH, ionic, 1.5e-3 / DILUTION)[1:] for pH in PHS for ionic in IONIC_MC
-    }
+def _salt_shifts(pH: float):
+    """(ionic grid, phytate zeta shift/mV) at 1.5 mM PA, from input-interpolated adsorption.
+
+    adsorb() log-interpolates the MC PMF/potential/charge in ionic strength, so the shift
+    is a genuine per-ionic prediction; continuation in ionic aids convergence.
+    """
+    gamma, shifts = 0.0, []
+    for ionic in _SALT_GRID:
+        gamma, rg, u, rs = adsorb(pH, ionic, 1.5e-3 / DILUTION, gamma0=gamma)
+        shifts.append(_zeta_from_profile(rg, u, rs))
+    return np.array(_SALT_GRID), np.array(shifts)
+
+
+@cache
+def _bare_interp(pH):
+    """Shape-preserving (PCHIP) interpolant of the measured bare-OB salt series.
+
+    Smooth and monotone between the 7 measured points (no overshoot), so the anchored
+    model curve is smooth rather than piecewise-linear; passes through the data exactly.
+    """
+    x, y, _ = _fig6c(pH, 0.0)
+    return PchipInterpolator(x, y)
 
 
 def _bare_6c(pH, nacl_mM):
-    x, y, _ = _fig6c(pH, 0.0)  # measured bare-OB salt series
-    return np.interp(nacl_mM, x, y)
+    return float(_bare_interp(pH)(nacl_mM))
 
 
 def _zeta_from_profile(rg, u, r_shear):
@@ -375,15 +442,14 @@ def evaluate_global():
     (metrics dict, (zeta_6a, zeta_6c)).
     """
     pa = _profiles_6a()
-    salt = _profiles_6c()
 
     def zeta_6a(pH, pa_mM):  # measured bare anchor + predicted phytate shift
         return ZETA_BARE[pH] + _zeta_from_profile(*pa[(pH, pa_mM)])
 
     def zeta_6c(pH, nacl_mM):
         ionic = nacl_mM / 1000 + 0.003
-        shifts = [_zeta_from_profile(*salt[(pH, i)]) for i in IONIC_MC]
-        return _bare_6c(pH, nacl_mM) + np.interp(np.log(ionic), np.log(IONIC_MC), shifts)
+        xi, shifts = _salt_shifts(pH)
+        return _bare_6c(pH, nacl_mM) + np.interp(np.log(ionic), np.log(xi), shifts)
 
     res, sd = [], []
     for pH in PHS:
@@ -405,7 +471,9 @@ def evaluate_global():
 
 
 def plot_fig6(metrics, zeta_6a, zeta_6c, path):
-    """Save the global zeta comparison (model curves over the measured means +/- SD)."""
+    """Save the zeta comparison: experiment as mean markers over a +/- SD band, model as
+    open triangles evaluated only at the measured conditions (no interconnecting line,
+    since the model is anchored to the measured bare at each point)."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -419,22 +487,33 @@ def plot_fig6(metrics, zeta_6a, zeta_6c, path):
 
     for pH in PHS:
         x, y, e = _fig6a(pH)
-        ax_a.errorbar(x, y, yerr=e, fmt="o", color=colors[pH], ms=7, capsize=3, label=f"pH {pH:g}")
-        ax_a.plot(x, [zeta_6a(pH, c) for c in x], "-", color=colors[pH], lw=2)
+        c = colors[pH]
+        ax_a.fill_between(x, y - e, y + e, color=c, alpha=0.12, edgecolor="none")
+        ax_a.errorbar(x, y, yerr=e, fmt="o", color=c, ms=6, capsize=2, label=f"pH {pH:g}")
+        ax_a.plot(x, [zeta_6a(pH, v) for v in x], "^", mfc="white", mec=c, mew=1.3, ms=8)
     ax_a.axhline(0, color="gray", lw=0.5)
     ax_a.set_xlabel("[PA] (mM)")
     ax_a.set_ylabel(r"$\zeta$ (mV)")
     ax_a.set_title(r"A) $\zeta$ vs [PA] (low salt)")
     ax_a.legend(ncol=3, fontsize=9)
 
-    nacl = np.linspace(5, 100, 40)
     for ax, pH in zip(ax_c, PHS, strict=True):
         xb, yb, eb = _fig6c(pH, 0.0)
         xr, yr, er = _fig6c(pH, 1.5)
+        ax.fill_between(xb, yb - eb, yb + eb, color="0.5", alpha=0.12, edgecolor="none")
         ax.errorbar(xb, yb, yerr=eb, fmt="ks", ms=4, capsize=2, label="exp, 0 PA")
-        ax.errorbar(xr, yr, yerr=er, fmt="r^", ms=4, capsize=2, label="exp, 1.5 mM PA")
-        # Model = measured bare (0-PA symbols, its anchor) + predicted phytate shift.
-        ax.plot(nacl, [zeta_6c(pH, n) for n in nacl], "r-", lw=2, label="model, 1.5 mM PA")
+        ax.fill_between(xr, yr - er, yr + er, color="red", alpha=0.12, edgecolor="none")
+        ax.errorbar(xr, yr, yerr=er, fmt="o", color="red", ms=4, capsize=2, label="exp, 1.5 mM PA")
+        ax.plot(
+            xr,
+            [zeta_6c(pH, n) for n in xr],
+            "^",
+            mfc="white",
+            mec="red",
+            mew=1.3,
+            ms=8,
+            label="model, 1.5 mM PA",
+        )
         ax.axhline(0, color="gray", lw=0.5)
         ax.set_title(f"C) pH {pH:g}")
         ax.set_xlabel("[NaCl] (mM)")
@@ -442,8 +521,8 @@ def plot_fig6(metrics, zeta_6a, zeta_6c, path):
     ax_c[0].legend(fontsize=8)
 
     fig.suptitle(
-        f"Fig 6 -- points: experiment (mean +/- SD); lines: cPB gvdW model (phytate shift on "
-        f"measured bare, no zeta fit).  RMS={metrics['rms']:.1f} mV, "
+        f"Fig 6 -- points: experiment (mean +/- SD, band); open triangles: model at the "
+        f"measured conditions (no zeta fit).  RMS={metrics['rms']:.1f} mV, "
         f"weighted RMS={metrics['wrms']:.1f} mV, reduced chi2={metrics['chi2_red']:.1f}"
     )
     fig.tight_layout()
