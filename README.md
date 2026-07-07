@@ -33,12 +33,23 @@ mc/                     Faunus MC simulation + analysis
   peptide_density_z.py  peptide number density along z from an XTC trajectory
   analysis.ipynb        merge the extracted CSVs and plot per condition
   runs/                 simulation output (large files git-ignored)
+zeta/                   the gvdW adsorption model (shared by all three probes)
+  zeta_gvdw.py          MC-grounded gvdW isotherm; zeta-potential vs [PA]/[NaCl]
+  parse_zeta.py         tidy the measured zeta workbook -> zeta_experimental.csv
 nmr/                    NMR binding bridge + free-phytate hydrodynamics
   nmr_binding_bridge.py
   rotational_diffusion.py (RDKit conformers + PyGRPY)
+itc/                    isothermal titration calorimetry fits
+  itc_fit.py            one-site (Wiseman) vs the MC-grounded gvdW isotherm
 latex/                  manuscript
 pyproject.toml          uv project (dependencies + ruff config)
 ```
+
+The single **gvdW adsorption model** (`zeta/zeta_gvdw.py`) carries the simulated
+phytate PMF to finite concentration and reconciles the calorimetry (ITC),
+ζ-potential and ³¹P NMR: the Henry constant `K_H` and the lateral coefficient `a2`
+(Forsman correlation-corrected) are read from the Monte Carlo, so the binding is
+transferred to each measurement rather than fitted.
 
 ## Setup
 

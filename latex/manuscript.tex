@@ -52,7 +52,7 @@ wall, $+1$ edge-on).  The fifth profile, the mean phytate charge, fixed the
 pH-dependent valence $z$.  Full parameters, move sets, and p$K_\text{a}$ tables are
 in the accompanying working notes.
 
-\subsection{Correlation-corrected gvdW model}
+\subsection{The gvdW adsorption model}
 
 The potential of mean force is the wall potential of classical adsorption theory,
 so the phytate accumulated at the brush follows from the generalised van der Waals
@@ -134,7 +134,7 @@ excluded diameter $d\approx11$\,\AA\ used in the isotherm (Eq.~\ref{eq:isotherm}
 \section{Results}
 
 One coarse-grained adsorption---taken from the simulated PMF and carried to finite
-concentration by the correlation-corrected gvdW model---accounts for all three
+concentration by the gvdW model---accounts for all three
 measurements of phytate binding to the oil body: the $^{31}$P relaxation, the
 $\zeta$-potential, and the calorimetry.  A single non-electrostatic binding energy,
 fixed by the NMR, is shared across the three; everything else is read from the
@@ -211,7 +211,7 @@ pH & $z$ & $K_\text{H}$/\AA & $\alpha$ & $f_\text{H}$/\% & $f_\text{gvdW}$/\% & 
 
 \subsection{The \texorpdfstring{$\zeta$}{zeta}-potential fit}
 
-The correlation-corrected model is compared to the measured $\zeta$-potential over
+The gvdW model is compared to the measured $\zeta$-potential over
 pH, phytate concentration and added salt (Fig.~\ref{fig:zeta}) with \emph{no
 parameter fitted to the $\zeta$ data}: the coverage, the potential shift and the
 shear plane all come from the simulation, and the single binding energy---the
@@ -242,9 +242,9 @@ effect (${\sim}5$--$10$\,mV more negative) is likewise not captured.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.92\textwidth]{../zeta/fig6_ccgvdw.png}
+\includegraphics[width=0.92\textwidth]{../zeta/fig_zeta.png}
 \caption{Measured $\zeta$-potential (mean markers over a $\pm$SD band, coloured by pH:
-  blue pH~4, orange pH~6, green pH~10) with the correlation-corrected gvdW model (open
+  blue pH~4, orange pH~6, green pH~10) with the gvdW model (open
   triangles, evaluated only at the measured conditions): (A) $\zeta$ vs.\ [PA] at low
   salt; (B) $\zeta$ vs.\ [NaCl] at $1.5$\,mM~PA.  The model adds the simulated phytate
   shift to the measured bare-OB $\zeta$ (its per-condition anchor), so it is drawn as
@@ -257,12 +257,12 @@ effect (${\sim}5$--$10$\,mV more negative) is likewise not captured.
 
 \subsection{The calorimetry}
 
-The correlation-corrected model fits the pH-4 thermogram about as well as the
+The gvdW model fits the pH-4 thermogram about as well as the
 instrument's independent one-site model (Fig.~\ref{fig:itc}, Table~\ref{tab:itc}),
 and it is the more appropriate picture: phytate binds a charged brush, not a set of
 independent chemical sites.  The one-site stoichiometry $n=0.38$ is itself a fitted,
 concentration-coupled quantity---between $0.32$ and $0.45$ across the three
-replicates---not a measured count, and it carries no surface physics.  The cPB model
+replicates---not a measured count, and it carries no surface physics.  The gvdW model
 instead \emph{fixes} the binding strength $K_\text{H}$ and the lateral repulsion
 $\hat a_2$ from the simulated PMF---the same $\hat a_2$ that governs the
 $\zeta$-potential and the NMR---so the binding is predicted rather than fitted,
@@ -275,7 +275,7 @@ the two (Table~\ref{tab:itc}).
 \small
 \begin{tabular}{@{}lcc@{}}
 \toprule
- & one-site & cPB (MC) \\
+ & one-site & gvdW (MC) \\
 \midrule
 adsorption & independent sites & charged surface \\
 binding & $K_a=(2.5\pm0.8)\times10^{5}$\,M$^{-1}$ & $K_\text{H}$ \emph{fixed} (PMF) \\
@@ -287,15 +287,15 @@ free parameters & 3 & \textbf{2} \\
 RMS\,/\,\textmu J & $5.9$ & $7.4$ \\
 \bottomrule
 \end{tabular}
-\caption{The instrument one-site model and the MC-grounded cPB model fit to the same
+\caption{The instrument one-site model and the MC-grounded gvdW model fit to the same
   pH-4 thermogram (Fig.~\ref{fig:itc}) at the cell ionic strength ($\approx\!15$\,mM);
   fitted values are $\pm1$ standard error from the fit covariance.  The one-site model
-  fills independent sites (stoichiometry $n$); the cPB model adsorbs phytate onto the
+  fills independent sites (stoichiometry $n$); the gvdW model adsorbs phytate onto the
   charged brush and \emph{fixes} the binding $K_\text{H}$ and the lateral repulsion
   $\hat a_2$ from the simulated PMF, leaving only the area and $\Delta H$ free.  The
   one-site parameters are strongly correlated ($K_a$--$\Delta H$ $0.88$,
   $\Delta H$--$n$ $0.85$), so their values are poorly determined; the two-parameter
-  cPB fit is the more constrained (area--$\Delta H$ $0.59$).}
+  gvdW fit is the more constrained (area--$\Delta H$ $0.59$).}
 \label{tab:itc}
 \end{table}
 
@@ -309,9 +309,9 @@ ionic strength returns $\approx\!18$\,mM.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.7\textwidth]{../itc/fig_itc_cpb.png}
-\caption{pH-4 ITC thermogram (points) with the MC-grounded cPB model (blue) and the
-  instrument one-site model (grey).  The cPB fit reads the binding from the simulated
+\includegraphics[width=0.7\textwidth]{../itc/fig_itc_gvdw.png}
+\caption{pH-4 ITC thermogram (points) with the MC-grounded gvdW model (blue) and the
+  instrument one-site model (grey).  The gvdW fit reads the binding from the simulated
   PMF and reproduces the thermogram with only $\Delta H$ and an area free.}
 \label{fig:itc}
 \end{figure}

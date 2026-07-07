@@ -35,12 +35,12 @@ import numpy as np
 import pandas as pd
 
 # Reuse the fitted-PMF machinery so we never depend on a possibly-stale all_pmfs.csv.
-# plot_pmf lives with the Monte-Carlo scripts in ../mc; the shared cPB lateral term
+# plot_pmf lives with the Monte-Carlo scripts in ../mc; the shared gvdW lateral term
 # (coverage-based Forsman correction) lives with the zeta model in ../zeta.
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT / "mc"))
 sys.path.insert(0, str(_ROOT / "zeta"))
-import zeta_ccgvdw as cc  # noqa: E402
+import zeta_gvdw as gv  # noqa: E402
 from plot_pmf import (  # noqa: E402
     RUNS_DIR,
     box_length_z,
@@ -58,14 +58,14 @@ def fitted_pmf(run_dir: Path, window: float = 10.0):
     """Return (r, w) for one run, with w the bulk-referenced fitted PMF (w -> 0).
 
     The same salt-robust non-electrostatic contact well as the zeta/ITC models is
-    added, so all three probes share one binding description (cc.EPS_NONEL).
+    added, so all three probes share one binding description (gv.EPS_NONEL).
     """
     data = np.genfromtxt(run_dir / "pmf.csv", delimiter=",", names=True)
     z, pmf, err = data["cv"], data["pmf_kT"], data["stderr_kT"]
     r = z + box_length_z(run_dir / "output.yaml") / 2  # distance from decorated wall
     debye = debye_length(ionic_strength_from_name(run_dir.name))
     _, b, _ = fit_tail(r, pmf, err, debye, window)
-    return r, pmf - b + cc._nonel_well(r)
+    return r, pmf - b + gv._nonel_well(r)
 
 
 def load_profiles(ionic: float):
@@ -134,7 +134,7 @@ def gvdw_coverage(K_H: float, n_B: float, d2: float, z: float, ionic: float) -> 
     theta = 0.0
     for _ in range(500):  # damped fixed point; theta stays in [0, 1)
         t = min(max(theta, 0.0), 0.999)
-        alpha = cc.lateral_alpha(ionic, z, t / d2)  # coverage-dependent correlation hole
+        alpha = gv.lateral_alpha(ionic, z, t / d2)  # coverage-dependent correlation hole
         new = phi0 * (1 - t) * np.exp(alpha * t - t / (1 - t))
         theta += 0.5 * (min(new, 0.999) - theta)
         if abs(new - t) < 1e-10:
@@ -230,7 +230,7 @@ def match_nmr(intensive, pa_mM, n, ionic=0.15, phi=0.5, d43_um=3.0, d_core=10.6)
         fg[pH] = f_gvdw
         n_B = pa_mM * 1e-3 * 6.02214076e23 / 1e27
         theta = gvdw_coverage(K_H, n_B, d_core**2, z, ionic)  # for display of converged alpha
-        alpha = cc.lateral_alpha(ionic, z, theta / d_core**2)
+        alpha = gv.lateral_alpha(ionic, z, theta / d_core**2)
         row = f"{pH:>4} {z:>5.1f} {K_H:>5.0f} {alpha:>9.2f} {f_henry:>8.2%} {f_gvdw:>7.2%} | "
         if pH in NMR_DELTA_R:
             free, obs = NMR_DELTA_R[pH]

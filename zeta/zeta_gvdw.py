@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Correlation-corrected gvdW model of the oil-body zeta-potential (Fig 6).
+"""gvdW adsorption model of the oil-body zeta-potential.
 
-One MC-grounded model connects the calorimetry (ITC), the electrophoretic
-zeta-potential (Fig 6A/C) and the NMR by extrapolating the infinite-dilution
-single-phytate PMF to finite phytate concentration:
+One MC-grounded gvdW model connects the calorimetry (ITC), the electrophoretic
+zeta-potential and the NMR by extrapolating the infinite-dilution single-phytate
+PMF to finite phytate concentration:
 
   * Henry limit          K_H = int (e^{-w(r)/kT} - 1) dr  from the MC PMF w(r).
   * finite concentration a 2D generalised-van-der-Waals isotherm with a lateral
@@ -34,9 +34,9 @@ brush (condition-dependent, mc/zeta.csv, the same 2%-of-peak rule as Fig 1C), so
 the model carries no adjustable parameter -- coverage, potential shift and shear
 plane all come from the simulation.
 
-Caveats: the mean-field/coverage-corrected gvdW no longer produces the pH-4 zeta
-reversal (the coverage-based correlation hole is self-limiting); the pH-10 bare
-anchor carries a ~10 mV offset; and Fig 6A and 6C disagree by ~12 mV at pH 6.
+Caveats: the gvdW model no longer produces the pH-4 zeta reversal (the
+coverage-based correlation hole is self-limiting); the pH-10 bare anchor carries a
+~10 mV offset; and the [PA] and [NaCl] series disagree by ~12 mV at pH 6.
 """
 
 from __future__ import annotations
@@ -493,7 +493,7 @@ def plot_fig6(metrics, zeta_6a, zeta_6c, path):
     ax_a.set_ylim(-75, 40)
     ax_a.set_xlabel("[PA] (mM)")
     ax_a.set_ylabel(r"$\zeta$ (mV)")
-    #ax_a.set_title(r"A) $\zeta$ vs [PA] (low salt)")
+    # ax_a.set_title(r"A) $\zeta$ vs [PA] (low salt)")
 
     # B: zeta vs [NaCl] at 1.5 mM PA, all three pH together.
     for pH in PHS:
@@ -504,14 +504,14 @@ def plot_fig6(metrics, zeta_6a, zeta_6c, path):
         ax_b.plot(xr, [zeta_6c(pH, n) for n in xr], "^", mfc="white", mec=c, mew=1.3, ms=8)
     ax_b.axhline(0, color="gray", lw=0.5)
     ax_b.set_xlabel("[NaCl] (mM)")
-    #ax_b.set_title(r"B) $\zeta$ vs [NaCl] (1.5 mM PA)")
+    # ax_b.set_title(r"B) $\zeta$ vs [NaCl] (1.5 mM PA)")
     ax_b.legend(fontsize=9, frameon=False, ncol=3)
 
-#   fig.suptitle(
-#       f"points: experiment (mean +/- SD, band); open triangles: model at measured "
-#       f"conditions (no zeta fit).  RMS={metrics['rms']:.1f} mV, "
-#       f"weighted RMS={metrics['wrms']:.1f} mV, reduced chi2={metrics['chi2_red']:.1f}"
-#   )
+    #   fig.suptitle(
+    #       f"points: experiment (mean +/- SD, band); open triangles: model at measured "
+    #       f"conditions (no zeta fit).  RMS={metrics['rms']:.1f} mV, "
+    #       f"weighted RMS={metrics['wrms']:.1f} mV, reduced chi2={metrics['chi2_red']:.1f}"
+    #   )
     fig.tight_layout(pad=1)
     fig.savefig(path, dpi=140)
 
@@ -544,7 +544,7 @@ def plot_bare_validation(path):
 if __name__ == "__main__":
     metrics, (zeta_6a, zeta_6c) = evaluate_global()
     print(
-        f"correlation-corrected gvdW vs measured zeta (no fit, {metrics['n']} points):\n"
+        f"gvdW model vs measured zeta (no fit, {metrics['n']} points):\n"
         f"  RMS = {metrics['rms']:.1f} mV,  error-weighted RMS = {metrics['wrms']:.1f} mV,  "
         f"reduced chi2 = {metrics['chi2_red']:.1f}\n"
     )
@@ -557,7 +557,7 @@ if __name__ == "__main__":
             m = zeta_6a(pH, pa_mM)
             print(f"  pH{pH:g} PA{pa_mM:<5} rs{rs:.0f} model{m:+.1f} data{ym:+.1f}+-{es:.1f}")
 
-    figure = Path(__file__).parent / "fig6_ccgvdw.png"
+    figure = Path(__file__).parent / "fig_zeta.png"
     plot_fig6(metrics, zeta_6a, zeta_6c, figure)
     validation = Path(__file__).parent / "fig_bare_validation.png"
     plot_bare_validation(validation)
