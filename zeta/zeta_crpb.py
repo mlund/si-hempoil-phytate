@@ -356,33 +356,47 @@ def _sanity(K_by_pH: dict[float, float], eps_ne: float = EPS_NE) -> list[tuple[s
 
 
 def plot_crpb(K_by_pH: dict[float, float], eps_ne: float, path: Path) -> None:
-    """Overcharge curve (zeta vs [PA], CR vs gvdW vs data) + the three-probe summary."""
+    """Two-panel CR-PB zeta figure in the zeta_gvdw.py style: experiment as mean markers
+    over a +/- SD band, CR-PB model as open triangles at the measured conditions (per-pH
+    K held fixed across salt in panel B). A: zeta vs [PA] (low salt); B: zeta vs [NaCl] at
+    1.5 mM PA, all pH."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    _, (zeta_6a_gvdw, _) = gv.evaluate_global()
-    colors = {4.0: "#1f4fd8", 6.0: "#e08a00", 10.0: "#2ca02c"}
-    fig, ax = plt.subplots(figsize=(7, 5))
-    pa_fine = np.geomspace(0.05, 8, 60)
+    colors = {4.0: "#1f4fd8", 6.0: "#e08a00", 10.0: "#2ca02c"}  # blue / orange / green
+    fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
+
+    # A: zeta vs [PA] at low salt, one series per pH.
+    for pH in PHS:
+        x, y, e = _zeta_data(pH)
+        c, K = colors[pH], K_by_pH[pH]
+        ax_a.fill_between(x, y - e, y + e, color=c, alpha=0.12, edgecolor="none")
+        ax_a.errorbar(x, y, yerr=e, fmt="x", color=c, ms=6, capsize=2, label=f"pH {pH:g}")
+        ax_a.plot(x, [zeta_pa(pH, v, K, eps_ne) for v in x], "^", mfc="white", mec=c, mew=1.3, ms=8)
+    ax_a.axhline(0, color="gray", lw=0.5)
+    ax_a.set_ylim(-75, 40)
+    ax_a.set_xlabel("[PA] (mM)")
+    ax_a.set_ylabel(r"$\zeta$ (mV)")
+
+    # B: zeta vs [NaCl] at 1.5 mM PA (per-pH K held fixed), all three pH together.
+    # Absolute prediction (not anchored to the measured bare salt curve): zeta comes
+    # straight from crpb_state = psi_d(sigma_eff, ionic), so both the bare salt decay
+    # and the phytate shift are predicted. The residual (~10 mV at pH 6 high salt) is
+    # the flat-Grahame-vs-permeable-brush limitation, shared with the gvdW.
     for pH in PHS:
         c, K = colors[pH], K_by_pH[pH]
-        x, y, e = _zeta_data(pH)
-        ax.errorbar(x, y, yerr=e, fmt="x", color=c, ms=6, capsize=2, label=f"pH {pH:g} (data)")
-        ax.plot(pa_fine, [zeta_pa(pH, v, K, eps_ne) for v in pa_fine], "-", color=c, lw=2)
-        ax.plot(x, [zeta_6a_gvdw(pH, v) for v in x], "^", mfc="white", mec=c, mew=1.2, ms=7)
-    ax.axhline(0, color="gray", lw=0.5)
-    ax.set_xlabel("[PA] (mM)")
-    ax.set_ylabel(r"$\zeta$ (mV)")
-    ax.set_ylim(-75, 45)
-    ks = ", ".join(f"K{int(p)}={K_by_pH[p]:.2g}" for p in PHS)
-    ax.set_title(
-        f"CR-PB (lines) vs gvdW (open triangles) vs data (x).\n"
-        f"per-pH {ks} /M (eps_ne={eps_ne:.1f} kT); CR-PB overcharges at pH 4, gvdW cannot"
-    )
-    ax.legend(fontsize=8, frameon=False, ncol=3)
-    fig.tight_layout()
+        xr, yr, er = gv._fig6c(pH, 1.5)
+        ax_b.fill_between(xr, yr - er, yr + er, color=c, alpha=0.12, edgecolor="none")
+        ax_b.errorbar(xr, yr, yerr=er, fmt="x", color=c, ms=6, capsize=2, label=f"pH {pH:g}")
+        model = [crpb_state(pH, n / 1000 + 0.003, 1.5e-3 / DILUTION, K, eps_ne).zeta for n in xr]
+        ax_b.plot(xr, model, "^", mfc="white", mec=c, mew=1.3, ms=8)
+    ax_b.axhline(0, color="gray", lw=0.5)
+    ax_b.set_xlabel("[NaCl] (mM)")
+    ax_b.legend(fontsize=9, frameon=False, ncol=3)
+
+    fig.tight_layout(pad=1)
     fig.savefig(path, dpi=140)
 
 
