@@ -479,53 +479,40 @@ def plot_fig6(metrics, zeta_6a, zeta_6c, path):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    colors = {4.0: "#1f4fd8", 6.0: "#e08a00", 10.0: "#2ca02c"}
-    fig = plt.figure(figsize=(13, 7))
-    grid = fig.add_gridspec(2, 3)
-    ax_a = fig.add_subplot(grid[0, :])
-    ax_c = [fig.add_subplot(grid[1, i]) for i in range(3)]
+    colors = {4.0: "#1f4fd8", 6.0: "#e08a00", 10.0: "#2ca02c"}  # blue / orange / green
+    fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
 
+    # A: zeta vs [PA] at low salt, one series per pH.
     for pH in PHS:
         x, y, e = _fig6a(pH)
         c = colors[pH]
         ax_a.fill_between(x, y - e, y + e, color=c, alpha=0.12, edgecolor="none")
-        ax_a.errorbar(x, y, yerr=e, fmt="o", color=c, ms=6, capsize=2, label=f"pH {pH:g}")
+        ax_a.errorbar(x, y, yerr=e, fmt="x", color=c, ms=6, capsize=2, label=f"pH {pH:g}")
         ax_a.plot(x, [zeta_6a(pH, v) for v in x], "^", mfc="white", mec=c, mew=1.3, ms=8)
     ax_a.axhline(0, color="gray", lw=0.5)
+    ax_a.set_ylim(-75, 40)
     ax_a.set_xlabel("[PA] (mM)")
     ax_a.set_ylabel(r"$\zeta$ (mV)")
-    ax_a.set_title(r"A) $\zeta$ vs [PA] (low salt)")
-    ax_a.legend(ncol=3, fontsize=9)
+    #ax_a.set_title(r"A) $\zeta$ vs [PA] (low salt)")
 
-    for ax, pH in zip(ax_c, PHS, strict=True):
-        xb, yb, eb = _fig6c(pH, 0.0)
+    # B: zeta vs [NaCl] at 1.5 mM PA, all three pH together.
+    for pH in PHS:
+        c = colors[pH]
         xr, yr, er = _fig6c(pH, 1.5)
-        ax.fill_between(xb, yb - eb, yb + eb, color="0.5", alpha=0.12, edgecolor="none")
-        ax.errorbar(xb, yb, yerr=eb, fmt="ks", ms=4, capsize=2, label="exp, 0 PA")
-        ax.fill_between(xr, yr - er, yr + er, color="red", alpha=0.12, edgecolor="none")
-        ax.errorbar(xr, yr, yerr=er, fmt="o", color="red", ms=4, capsize=2, label="exp, 1.5 mM PA")
-        ax.plot(
-            xr,
-            [zeta_6c(pH, n) for n in xr],
-            "^",
-            mfc="white",
-            mec="red",
-            mew=1.3,
-            ms=8,
-            label="model, 1.5 mM PA",
-        )
-        ax.axhline(0, color="gray", lw=0.5)
-        ax.set_title(f"C) pH {pH:g}")
-        ax.set_xlabel("[NaCl] (mM)")
-    ax_c[0].set_ylabel(r"$\zeta$ (mV)")
-    ax_c[0].legend(fontsize=8)
+        ax_b.fill_between(xr, yr - er, yr + er, color=c, alpha=0.12, edgecolor="none")
+        ax_b.errorbar(xr, yr, yerr=er, fmt="x", color=c, ms=6, capsize=2, label=f"pH {pH:g}")
+        ax_b.plot(xr, [zeta_6c(pH, n) for n in xr], "^", mfc="white", mec=c, mew=1.3, ms=8)
+    ax_b.axhline(0, color="gray", lw=0.5)
+    ax_b.set_xlabel("[NaCl] (mM)")
+    #ax_b.set_title(r"B) $\zeta$ vs [NaCl] (1.5 mM PA)")
+    ax_b.legend(fontsize=9, frameon=False, ncol=3)
 
-    fig.suptitle(
-        f"Fig 6 -- points: experiment (mean +/- SD, band); open triangles: model at the "
-        f"measured conditions (no zeta fit).  RMS={metrics['rms']:.1f} mV, "
-        f"weighted RMS={metrics['wrms']:.1f} mV, reduced chi2={metrics['chi2_red']:.1f}"
-    )
-    fig.tight_layout()
+#   fig.suptitle(
+#       f"points: experiment (mean +/- SD, band); open triangles: model at measured "
+#       f"conditions (no zeta fit).  RMS={metrics['rms']:.1f} mV, "
+#       f"weighted RMS={metrics['wrms']:.1f} mV, reduced chi2={metrics['chi2_red']:.1f}"
+#   )
+    fig.tight_layout(pad=1)
     fig.savefig(path, dpi=140)
 
 
