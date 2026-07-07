@@ -265,7 +265,13 @@ def eps_degeneracy(pH: float = 4.0, eps_grid=(0.0, 1.0, 2.0, 3.0, 4.0)):
 
 # --- probe 2: ITC ----------------------------------------------------------------
 def fit_itc(K: float, eps_ne: float = EPS_NE, pH: float = 4.0, ionic: float = I_ITC):
-    """Transfer (K, eps_ne) to the pH-4 thermogram; fit only area + dH. Returns (area, dH, rms)."""
+    """Transfer (K, eps_ne) to the pH-4 thermogram; fit only area + dH.
+
+    Returns (area, dH, rms, corr) with corr the area-dH fit correlation. The CR-PB
+    binding is fixed from the zeta-fitted K, so ITC leaves only these two parameters;
+    their low correlation is what makes the fit more constrained than the three-parameter
+    one-site model.
+    """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "itc"))
     import itc_data  # noqa: E402
     import itc_fit  # noqa: E402
@@ -277,7 +283,7 @@ def fit_itc(K: float, eps_ne: float = EPS_NE, pH: float = 4.0, ionic: float = I_
     def model(_x, area, dH):
         return itc_fit._heat_uJ(titr, itc_fit._gvdw_bound(titr, area, grid, cov), dH)
 
-    popt, _ = curve_fit(
+    popt, pcov = curve_fit(
         model,
         titr.mole_ratio,
         titr.heat_uJ,
@@ -286,7 +292,49 @@ def fit_itc(K: float, eps_ne: float = EPS_NE, pH: float = 4.0, ionic: float = I_
         maxfev=20000,
     )
     rms = float(np.sqrt(np.mean((titr.heat_uJ - model(titr.mole_ratio, *popt)) ** 2)))
-    return (*popt, rms)
+    corr = float(pcov[0, 1] / np.sqrt(pcov[0, 0] * pcov[1, 1]))
+    return (*popt, rms, corr)
+
+
+def plot_itc(K: float, eps_ne: float, path: Path) -> None:
+    """pH-4 ITC thermogram: data (replicate mean +/- SD) with the CR-PB and one-site
+    models, for the CR-PB-vs-one-site comparison figure."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    itc = str(Path(__file__).resolve().parent.parent / "itc")
+    sys.path.insert(0, itc)
+    import itc_data  # noqa: E402
+    import itc_fit  # noqa: E402
+
+    # Replicate mean +/- SD from the two matched-scheme runs (rep1 has a different scheme).
+    reps = [itc_data.load_xls(Path(itc) / f"pH4/pH4_rep{i}.xls", 4.0) for i in (2, 3)]
+    n = min(len(r.heat_uJ) for r in reps)
+    heats = np.vstack([r.heat_uJ[:n] for r in reps])
+    x, y, e = reps[-1].mole_ratio[:n], heats.mean(0), heats.std(0)
+
+    titr = itc_data.load(4.0)
+    grid = np.logspace(-9, -2, 24)
+    cov = np.array([crpb_state(4.0, I_ITC, c, K, eps_ne).gamma for c in grid])
+    area, dH, _, _ = fit_itc(K, eps_ne)
+    crpb = itc_fit._heat_uJ(titr, itc_fit._gvdw_bound(titr, area, grid, cov), dH)
+    Ka, dH1, n1, _ = itc_fit.fit_onesite(titr)
+    onesite = itc_fit.onesite_heat(titr, Ka, dH1, n1)
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.errorbar(
+        x, y, yerr=e, fmt="o", color="#333333", ms=5, capsize=2, label="experiment (mean ± SD)"
+    )
+    ax.plot(titr.mole_ratio, crpb, "-", color="#1f4fd8", lw=2, label="charge-regulated (CR-PB)")
+    ax.plot(titr.mole_ratio, onesite, "--", color="gray", lw=1.5, label="one-site (independent)")
+    ax.axhline(0, color="gray", lw=0.5)
+    ax.set_xlabel("mole ratio PA : oleosin")
+    ax.set_ylabel(r"heat per injection ($\mu$J)")
+    ax.legend(fontsize=9, frameon=False)
+    fig.tight_layout()
+    fig.savefig(path, dpi=140)
 
 
 # --- probe 3: NMR ----------------------------------------------------------------
@@ -462,9 +510,18 @@ if __name__ == "__main__":
             print(f"  {pH:>4g} {nacl:>10.0f} {zc:>+8.1f} {ym:>+7.1f}+-{es:.1f}")
 
     print("\nprobe 2 -- ITC (pH 4, transfer K(pH 4), fit area + dH):")
-    area, dH, rms = fit_itc(K_by_pH[4.0], eps_ne)
-    print(f"  CR-PB : area={area:.0f} A^2/oleosin  dH={dH:.1f} kJ/mol  RMS={rms:.1f} uJ")
-    print("  gvdW  : area=2945 A^2/oleosin  dH=-33.7 kJ/mol  RMS=7.4 uJ  (for reference)")
+    area, dH, rms, corr = fit_itc(K_by_pH[4.0], eps_ne)
+    print(
+        f"  CR-PB : area={area:.0f} A^2/oleosin  dH={dH:.1f} kJ/mol  RMS={rms:.1f} uJ  "
+        f"area-dH corr={corr:+.2f}"
+    )
+    import itc_data as _id  # noqa: E402
+    import itc_fit as _if  # noqa: E402
+
+    _, pcov1 = _if.fit_onesite_pcov(_id.load(4.0))
+    c1 = _if.corr_from_cov(pcov1)  # one-site (Ka, dH, n) correlations
+    print(f"  one-site corr: Ka-dH={c1[0, 1]:+.2f}  dH-n={c1[1, 2]:+.2f}  Ka-n={c1[0, 2]:+.2f}")
+    print("  -> CR-PB (2 params) more constrained than one-site (3 params) iff |area-dH| < those")
 
     print("\nprobe 3 -- NMR bound fraction (0.15 M, 7.6 mM, transfer per-pH K):")
     print(f"  {'pH':>4} {'f_CR':>8} {'f_req':>8} {'ratio':>7}")
@@ -476,4 +533,6 @@ if __name__ == "__main__":
 
     figure = Path(__file__).parent / "fig_crpb.png"
     plot_crpb(K_by_pH, eps_ne, figure)
-    print(f"\nsaved {figure.name}")
+    itc_fig = Path(__file__).resolve().parent.parent / "itc" / "fig_itc_crpb.png"
+    plot_itc(K_by_pH[4.0], eps_ne, itc_fig)
+    print(f"\nsaved {figure.name}, {itc_fig.name}")

@@ -94,6 +94,24 @@ def fit_onesite(titr: itc_data.Titration):
     return (*popt, rms)
 
 
+def fit_onesite_pcov(titr: itc_data.Titration):
+    """One-site fit returning (popt=(Ka,dH,n), pcov) for parameter-correlation analysis."""
+    popt, pcov = curve_fit(
+        lambda x, Ka, dH, n: onesite_heat(titr, Ka, dH, n),
+        titr.mole_ratio,
+        titr.heat_uJ,
+        p0=[2e5, -50.0, 0.33],
+        maxfev=200000,
+    )
+    return popt, pcov
+
+
+def corr_from_cov(pcov: np.ndarray) -> np.ndarray:
+    """Correlation matrix from a covariance matrix."""
+    d = np.sqrt(np.diag(pcov))
+    return pcov / np.outer(d, d)
+
+
 # --- MC-grounded gvdW adsorption (K_H and a2 read from the simulation) -----------
 def _gvdw_coverage(cfree_M: float, ionic: float, pH: float = 4.0, nit: int = 200) -> float:
     """Self-consistent gvdW areal coverage at free phytate ``cfree_M``.
