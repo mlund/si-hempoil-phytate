@@ -175,8 +175,8 @@ def main() -> None:
         z, pot_all = mean_profile(all_csvs, (3,))
         _, pot_peptide, sigma_peptide = mean_profile(pep_csvs, (3, 1))  # potential + charge density
         r_prof = z + half_lz
-        for ri, pa, pp in zip(r_prof, pot_all, pot_peptide, strict=True):
-            potential_rows.append([ph, ionic, ri, pa, pp])
+        for ri, pa, pp, sp in zip(r_prof, pot_all, pot_peptide, sigma_peptide, strict=True):
+            potential_rows.append([ph, ionic, ri, pa, pp, sp])
 
         # Zeta at the fixed-charge edge of the brush (sigma_peptide -> 0).
         r_shear, zeta = shear_zeta(r_prof, sigma_peptide, pot_all, half_lz)
@@ -218,7 +218,16 @@ def main() -> None:
 
     with open(args.potential, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["pH", "ionic_strength", "r", "potential_all_mV", "potential_peptide_mV"])
+        w.writerow(
+            [
+                "pH",
+                "ionic_strength",
+                "r",
+                "potential_all_mV",
+                "potential_peptide_mV",
+                "sigma_peptide_e_A2",
+            ]
+        )
         w.writerows(potential_rows)
     print(f"Saved {args.potential} ({len(potential_rows)} rows)")
 

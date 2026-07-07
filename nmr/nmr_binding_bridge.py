@@ -35,8 +35,12 @@ import numpy as np
 import pandas as pd
 
 # Reuse the fitted-PMF machinery so we never depend on a possibly-stale all_pmfs.csv.
-# plot_pmf lives with the Monte-Carlo scripts in ../mc.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "mc"))
+# plot_pmf lives with the Monte-Carlo scripts in ../mc; the shared cPB lateral term
+# (coverage-based Forsman correction) lives with the zeta model in ../zeta.
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT / "mc"))
+sys.path.insert(0, str(_ROOT / "zeta"))
+import zeta_ccgvdw as cc  # noqa: E402
 from plot_pmf import (  # noqa: E402
     RUNS_DIR,
     box_length_z,
@@ -51,13 +55,17 @@ MC = Path(__file__).resolve().parent.parent / "mc"
 
 
 def fitted_pmf(run_dir: Path, window: float = 10.0):
-    """Return (r, w) for one run, with w the bulk-referenced fitted PMF (w -> 0)."""
+    """Return (r, w) for one run, with w the bulk-referenced fitted PMF (w -> 0).
+
+    The same salt-robust non-electrostatic contact well as the zeta/ITC models is
+    added, so all three probes share one binding description (cc.EPS_NONEL).
+    """
     data = np.genfromtxt(run_dir / "pmf.csv", delimiter=",", names=True)
     z, pmf, err = data["cv"], data["pmf_kT"], data["stderr_kT"]
     r = z + box_length_z(run_dir / "output.yaml") / 2  # distance from decorated wall
     debye = debye_length(ionic_strength_from_name(run_dir.name))
     _, b, _ = fit_tail(r, pmf, err, debye, window)
-    return r, pmf - b
+    return r, pmf - b + cc._nonel_well(r)
 
 
 def load_profiles(ionic: float):
@@ -107,7 +115,7 @@ def f_bound_henry(a: float, K_H: float) -> float:
     return aK / (1.0 + aK)
 
 
-def gvdw_coverage(K_H: float, n_B: float, d2: float, a2_kT: float = 0.0) -> float:
+def gvdw_coverage(K_H: float, n_B: float, d2: float, z: float, ionic: float) -> float:
     """Adsorbed-layer coverage theta = Gamma*d^2 from Nordholm's gvdW 2D isotherm.
 
     Solve the implicit hard-disk (Eq 7.43) / Lennard-Jones (Eq 7.54) isotherm
@@ -117,6 +125,8 @@ def gvdw_coverage(K_H: float, n_B: float, d2: float, a2_kT: float = 0.0) -> floa
     with Gamma_HA = K_H n_B the Henry (zero-coverage) excess. In coverage form,
     theta = phi0 (1-theta) exp(alpha*theta - theta/(1-theta)), phi0 = K_H n_B d^2,
     alpha = 2 a2/(kT d^2) (alpha < 0 for the repulsive phytate-phytate laterals).
+    The Forsman-corrected alpha depends on the coverage itself (R_c = 1/sqrt(pi Gamma),
+    Gamma = theta/d^2), so it is re-evaluated each fixed-point step.
     """
     phi0 = K_H * n_B * d2  # Henry-limit coverage
     if phi0 <= 0:
@@ -124,21 +134,22 @@ def gvdw_coverage(K_H: float, n_B: float, d2: float, a2_kT: float = 0.0) -> floa
     theta = 0.0
     for _ in range(500):  # damped fixed point; theta stays in [0, 1)
         t = min(max(theta, 0.0), 0.999)
-        new = phi0 * (1 - t) * np.exp(a2_kT * t - t / (1 - t))
+        alpha = cc.lateral_alpha(ionic, z, t / d2)  # coverage-dependent correlation hole
+        new = phi0 * (1 - t) * np.exp(alpha * t - t / (1 - t))
         theta += 0.5 * (min(new, 0.999) - theta)
         if abs(new - t) < 1e-10:
             break
     return theta
 
 
-def f_bound_gvdw(a: float, K_H: float, pa_mM: float, d_A: float, a2_kT: float = 0.0) -> float:
+def f_bound_gvdw(a: float, K_H: float, pa_mM: float, d_A: float, z: float, ionic: float) -> float:
     """Bound fraction from the gvdW isotherm: crowding + lateral interactions cap it.
 
     f_bound = Gamma a / n_B = (theta/d^2) a / n_B; reduces to Henry (a K_H) as theta->0.
     """
     n_B = pa_mM * 1e-3 * 6.02214076e23 / 1e27  # mM -> 1/A^3
     d2 = d_A**2
-    theta = gvdw_coverage(K_H, n_B, d2, a2_kT)
+    theta = gvdw_coverage(K_H, n_B, d2, z, ionic)
     Gamma = theta / d2
     return Gamma * a / n_B
 
@@ -171,21 +182,6 @@ NMR_DELTA_R = {4.0: (162.0, 559.0), 6.0: (130.0, 430.0), 10.0: (5.1, 52.0)}
 # Bulk phytate valence z(pH) at I=0.15 M (charge.csv, INO selection, large-r mean).
 PHYTATE_Z = {4.0: 5.94, 6.0: 7.08, 7.0: 8.67, 10.0: 10.54}
 
-BJERRUM_A = 7.1528  # water, 298.15 K (matches plot_pmf.py)
-
-
-def lateral_a2_kT(z: float, ionic: float, d_core: float) -> float:
-    """Mean-field lateral coefficient alpha = 2*a2/(kT d^2) for screened-Coulomb disks.
-
-    Nordholm Eq 7.47 with the LJ tail replaced by a Yukawa repulsion u(r)/kT =
-    z^2 l_B/r exp(-kappa r), integrated from the hard core d_core outward:
-        a2/kT = -1/2 int_{d}^inf 2 pi r (z^2 l_B/r e^{-kr}) dr = -(pi z^2 l_B/kappa) e^{-k d}.
-    Negative (repulsive) -> suppresses adsorption as coverage rises (Eq 7.54).
-    """
-    kappa = 1.0 / debye_length(ionic)
-    a2 = -(np.pi * z**2 * BJERRUM_A / kappa) * np.exp(-kappa * d_core)
-    return 2.0 * a2 / d_core**2
-
 
 def site_density_for_f(a: float, K_H: float, f_target: float, pa_mM: float, n: float) -> float:
     """Oleosin site conc. (mM) whose saturation caps the bound fraction at f_target.
@@ -209,9 +205,9 @@ def match_nmr(intensive, pa_mM, n, ionic=0.15, phi=0.5, d43_um=3.0, d_core=10.6)
     """Does the gvdW isotherm reproduce the NMR pH series — in particular pH4 > pH6?
 
     f_bound now comes from the charge/salt-dependent gvdW 2D isotherm (Eq 7.44/7.54):
-    K_H from the PMF, hard-core d from PyGRPY, lateral a2 from screened-Coulomb
-    phytate-phytate repulsion. Compared against the NMR-required f_bound from two-site
-    exchange, f_req = (DeltaR_obs - DeltaR_free)/(DeltaR_bound - DeltaR_free).
+    K_H from the PMF, hard-core d from PyGRPY, lateral a2 the coverage-based Forsman
+    correction shared with the zeta and ITC models. Compared against the NMR-required
+    f_bound from two-site exchange, f_req = (DeltaR_obs - DeltaR_free)/(DeltaR_bound - DeltaR_free).
     """
     a = specific_area(phi, d43_um)
     print(
@@ -229,10 +225,12 @@ def match_nmr(intensive, pa_mM, n, ionic=0.15, phi=0.5, d43_um=3.0, d_core=10.6)
             continue
         K_H = intensive[pH][0]
         z = PHYTATE_Z[pH]
-        alpha = lateral_a2_kT(z, ionic, d_core)
         f_henry = f_bound_henry(a, K_H)
-        f_gvdw = f_bound_gvdw(a, K_H, pa_mM, d_core, a2_kT=alpha)
+        f_gvdw = f_bound_gvdw(a, K_H, pa_mM, d_core, z, ionic)
         fg[pH] = f_gvdw
+        n_B = pa_mM * 1e-3 * 6.02214076e23 / 1e27
+        theta = gvdw_coverage(K_H, n_B, d_core**2, z, ionic)  # for display of converged alpha
+        alpha = cc.lateral_alpha(ionic, z, theta / d_core**2)
         row = f"{pH:>4} {z:>5.1f} {K_H:>5.0f} {alpha:>9.2f} {f_henry:>8.2%} {f_gvdw:>7.2%} | "
         if pH in NMR_DELTA_R:
             free, obs = NMR_DELTA_R[pH]

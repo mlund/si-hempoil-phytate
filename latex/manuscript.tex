@@ -1,0 +1,326 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+
+\title{One adsorption model for the phytate--oleosin interaction:\\
+       \large reconciling $^{31}$P NMR, $\zeta$-potential and calorimetry}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Methods}
+
+\subsection{Monte Carlo simulations}
+
+Coarse-grained Monte Carlo simulations resolved the phytate--oleosin interaction
+at the molecular scale.  The N-terminal arm of \textit{Cannabis sativa} oleosin
+(UniProt~A0A803P977, \texttt{MKSFLPESGPSAQQ}) was represented at one bead per
+residue with the CALVADOS~3 model~\cite{Tesei2021,Cao2024}; fifty chains were
+end-grafted to one wall of a $130\times130\times200$\,\AA$^{3}$ slit at a surface
+density of $3\times10^{-3}$\,\AA$^{-2}$, forming a brush that stands in for the
+oil-body surface~\cite{Tzen1992}.  A single phytate molecule
+(\textit{myo}-inositol hexakisphosphate) was modelled as a rigid seven-bead unit:
+one inositol centre and six phosphates.  Beads interacted through the
+Ashbaugh--Hatch potential~\cite{Ashbaugh2008} and a screened-Coulomb term set by
+the salt, with phytate--peptide cross-interactions made purely repulsive.  Both
+the peptide and phytate titrated with pH in the semi-grand canonical
+ensemble~\cite{SmithTriska1994}, exchanging protons with an implicit bath through
+molecular swap moves.  The peptide has four titratable groups (Glu, Lys, and the
+two termini); phytate is less standard---its twelve dissociable protons (two per
+phosphate) give thirteen charge states from neutral H$_{12}$PA to PA$^{12-}$, with
+p$K_\text{a}$ values spanning $\sim\!1$ to $12$~\cite{DeStefano2003,Grimsley2009}.
+Titrating all twelve reproduces the strong pH-dependence of the phytate valence
+$z$, which sets the lateral self-repulsion of the adsorbed layer
+($\hat a_2\propto z^2$, below).  Faunus~\cite{Stenqvist2013} sampled
+configurations at pH~4, 6, 7 and 10 and 5--150\,mM NaCl.
+
+The simulation yielded five profiles against the distance $r$ from the grafted
+wall.  Umbrella sampling along the inositol $z$-coordinate (40 windows) gave the
+potential of mean force $w(r)$, referenced to zero in the bulk.  The laterally
+averaged electric potential $\varphi(r)$ gave a simulated $\zeta$-potential as
+$\varphi$ at the outer edge of the grafted charge.  The rotational mean-square
+displacement gave the relative rotational mobility $D/D_0$ of an adsorbed phytate.
+A shape analysis gave the wall alignment $S_\text{wall}$, the second-rank
+orientational order parameter of the disk-shaped phytate relative to the wall
+($S_\text{wall}=0$ isotropic, $-\tfrac12$ face-on with the disk parallel to the
+wall, $+1$ edge-on).  The fifth profile, the mean phytate charge, fixed the
+pH-dependent valence $z$.  Full parameters, move sets, and p$K_\text{a}$ tables are
+in the accompanying working notes.
+
+\subsection{Correlation-corrected gvdW model}
+
+The potential of mean force is the wall potential of classical adsorption theory,
+so the phytate accumulated at the brush follows from the generalised van der Waals
+(gvdW) treatment of a fluid against an attractive wall~\cite{Nordholm2018} without
+further simulation.  The zero-coverage (Henry) constant is the Boltzmann-weighted
+surface excess,
+\begin{equation}\label{eq:KH}
+K_\text{H} = \int_0^\infty \big(e^{-w(r)/k_BT}-1\big)\,dr,
+\end{equation}
+where $r$ is the distance from the grafted wall and $w$ the referenced PMF.  The
+two-dimensional isotherm then relates the areal excess $\Gamma$ to the Henry
+excess $\Gamma_\text{HA}=K_\text{H}\,n_B$ ($n_B$ the bulk phytate density) through
+a hard-disk and a lateral term,
+\begin{equation}\label{eq:isotherm}
+\Gamma = \Gamma_\text{HA}(1-\Gamma d^2)
+         \exp\!\Big(\frac{2\hat a_2\Gamma}{k_BT}-\frac{\Gamma d^2}{1-\Gamma d^2}\Big),
+\qquad
+\hat a_2 = -\tfrac12\!\int_d^\infty\! 2\pi r\,u(r)\,dr,
+\end{equation}
+with $d\approx11$\,\AA\ the phytate diameter and $\hat a_2$ the lateral
+binding-energy coefficient of the adsorbed layer for the phytate--phytate pair
+potential $u(r)$.  The valence $z(\text{pH})$ is read from the simulated phytate
+charge, so the framework carries no fitted binding constant.  Because $\Gamma$
+appears on both sides, Eq.~\ref{eq:isotherm} is implicit; in the coverage
+$\theta=\Gamma d^2$ it reads $\theta = \Gamma_\text{HA} d^2\,(1-\theta)\,
+\exp\!\big(\alpha\theta-\theta/(1-\theta)\big)$ with $\alpha=2\hat a_2/(k_BT d^2)$,
+and we solve it for $\theta$ by fixed-point iteration at each pH and salt.
+
+For a screened-Coulomb repulsion $u(r)/k_BT = z^2 l_B\,e^{-\kappa r}/r$ (Bjerrum
+length $l_B$, Debye length $1/\kappa$), the mean-field integral gives
+$\hat a_2/k_BT = -\pi z^2 l_B\,e^{-\kappa d}/\kappa$, so $\hat a_2\propto z^2$.  This
+mean-field form overestimates the like-charge repulsion between adsorbed phytates.
+We correct $\hat a_2$ following Forsman's correlation-corrected Poisson--Boltzmann
+theory~\cite{Forsman2004}: below a correlation-hole radius $R_c$ the divergent
+Coulomb repulsion is replaced by its tangent.  $R_c$ is the nearest-neighbour
+spacing of the adsorbed phytates, taken as Forsman's smaller of the density and
+surface-charge estimates,
+\begin{equation}\label{eq:Rc}
+R_c = \min\!\Big(1/\sqrt{\pi\Gamma},\ \sqrt{z/(\pi|\sigma_\text{net}|)}\Big),
+\end{equation}
+capped at $2/\kappa$ and floored at the hard core $d$.  The density spacing
+$1/\sqrt{\pi\Gamma}$ always bounds the hole, so the correction softens the repulsion
+but never past the physical inter-phytate spacing; it therefore does not drive the
+charge reversal that an uncapped surface-charge runaway would.  The simulated PMF is
+almost purely electrostatic, so we add one salt-robust short-range attraction of
+depth $\varepsilon$ at contact for the non-electrostatic binding---specific
+phosphate--Lys/Arg ion-pairing---that the coarse-grained model under-represents;
+$\varepsilon$ is fixed by the NMR and shared by all three probes.  The adsorbed
+layer is solved self-consistently, and the $\zeta$-potential is read at the shear
+plane from a nonlinear Poisson--Boltzmann solve of the adsorbed charge on the
+simulated potential.  The valence $z(r)$ is the MC-regulated value.  Because the
+$\zeta$ sample is diluted a thousandfold, its coverage is the isotherm
+re-equilibrated at $[\text{PA}]/1000$.  The shear plane is the MC fixed-charge edge
+of the brush (the $2\%$-of-peak rule of the potential profile), so no parameter is
+fitted to the $\zeta$ or calorimetric data beyond the NMR-fixed $\varepsilon$.
+
+\subsection{NMR analysis}
+
+The $^{31}$P spectra show one population-averaged resonance, and the shallow PMF
+well ($\sim\!2.6\,k_BT$ at $I=0.15$\,M) gives sub-millisecond residence
+times---far shorter than the relaxation decay---so the rates are in fast exchange:
+\begin{equation}\label{eq:twosite}
+\Delta R_\text{obs} = f_\text{bound}\,\Delta R_\text{bound}
+                    + (1-f_\text{bound})\,\Delta R_\text{free},
+\end{equation}
+where $\Delta R = R_{1\rho}-R_1$ isolates the slow reorientation.  Two rates are
+measured at each pH---the mixture rate $\Delta R_\text{obs}$ of the oil-body sample
+and the free-phytate rate $\Delta R_\text{free}$ of the control---and the
+simulation supplies $f_\text{bound}$ from the coverage, $f_\text{bound}=\Gamma
+a/n_B$, with the oil-body specific area $a=6\phi_\text{OB}/d_{43}$.  A measured
+rate thus becomes a parameter-free test of the simulated adsorption.  The
+free-phytate hydrodynamics enter here too: rotational and translational diffusion
+coefficients, estimated for each protonation state from RDKit conformer
+ensembles~\cite{RDKit} with Rotne--Prager--Yamakawa bead
+hydrodynamics~\cite{Zuk2018,Waszkiewicz2023}, give the fast free-tumbling reference
+against which $\Delta R_\text{obs}$ is read; the same hydrodynamic radius sets the
+excluded diameter $d\approx11$\,\AA\ used in the isotherm (Eq.~\ref{eq:isotherm}).
+
+\section{Results}
+
+One coarse-grained adsorption---taken from the simulated PMF and carried to finite
+concentration by the correlation-corrected gvdW model---accounts for all three
+measurements of phytate binding to the oil body: the $^{31}$P relaxation, the
+$\zeta$-potential, and the calorimetry.  A single non-electrostatic binding energy,
+fixed by the NMR, is shared across the three; everything else is read from the
+simulation.
+
+\subsection{The simulation}
+
+The simulation sets the stage (Fig.~\ref{fig:mc}).  At low salt the PMF has a deep
+attractive well for pH~4 and~6 ($-17$ and $-15\,k_BT$ near $r\approx27$\,\AA) and
+turns repulsive at pH~10 (Fig.~\ref{fig:mc}A).  Read at the outer edge of the fixed
+brush charge ($\approx\!40$\,\AA), the simulated $\zeta$-potential reproduces the
+measured bare-oil-body values at pH~4 and~10 ($+40$ vs.\ $+38$\,mV; $-72$ vs.\
+$-56$\,mV) but not at pH~6 ($+5$ vs.\ $-12$\,mV, Fig.~\ref{fig:mc}C): the
+single-peptide model carries the cationic oleosin patch but not the anionic
+phospholipid, so it misses the sign of the near-isoelectric surface.  The potential
+rises higher still inside the brush---to $+52$\,mV at the pH-4 binding
+minimum---and that stronger field is what drives the adsorption there.  An adsorbed
+phytate nonetheless stays mobile, tumbling at about half its bulk rate
+($D/D_0\approx0.5$--$0.7$, Fig.~\ref{fig:mc}B) with only a weak face-on bias
+($S_\text{wall}\approx-0.005$).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\textwidth]{../mc/composite_lowsalt.png}
+\caption{Simulated phytate at the oleosin brush, low salt: PMF $w(r)$, phytate
+  charge and potential profiles, wall alignment $S_\text{wall}$, and relative
+  rotational mobility $D/D_0$ against distance from the grafted wall, by pH.}
+\label{fig:mc}
+\end{figure}
+
+\subsection{The simulations account for the \texorpdfstring{$^{31}$P}{31P} relaxation}
+
+Combining the isotherm with the relaxation tests the adsorption without a fitted
+binding constant (Table~\ref{tab:gvdw}).  The binding signature is the difference
+$\Delta R_\text{obs}-\Delta R_\text{free}$, strongest at pH~4.  Henry's law alone
+gets the pH-4/pH-6 order backwards: $K_\text{H}$ rises from pH~4 to~6, predicting
+\emph{more} binding at pH~6.  The lateral repulsion resolves it---scaling as $z^2$
+(Eq.~\ref{eq:isotherm}), it crowds the more deprotonated pH-6 layer more strongly and
+caps its coverage below pH~4.  The gvdW bound fraction $f_\text{gvdW}$ then falls
+monotonically from pH~4 to~10 and matches the NMR-required $f_\text{req}$ in both
+order and magnitude ($1.3$, $1.1$, $0.1\%$ against $1.3$, $1.0$, $0.2\%$), once the
+non-electrostatic contact term is folded into $K_\text{H}$.  At pH~10 the strongly
+negative brush all but excludes phytate, and the small residual binding matches the
+weak measured effect.  Cross-polarisation gave no signal at any pH, consistent with
+the retained mobility of the simulated adsorbed state: binding broadens the line by
+co-tumbling with the micron-scale droplet, not by freezing the molecule.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}c ccccc c ccc@{}}
+\toprule
+ & \multicolumn{5}{c}{Simulation (gvdW, $I=0.15$\,M)} & &
+   \multicolumn{3}{c}{$^{31}$P relaxation} \\
+\cmidrule(lr){2-6}\cmidrule(lr){8-10}
+pH & $z$ & $K_\text{H}$/\AA & $\alpha$ & $f_\text{H}$/\% & $f_\text{gvdW}$/\% & &
+ $\Delta R_\text{free}$ & $\Delta R_\text{obs}$ & $f_\text{req}$/\% \\
+\midrule
+4  & $-5.9$  & $925$  & $-27$ & $8.5$  & $1.31$ & & $162$ & $559$ & $1.33$ \\
+6  & $-7.1$  & $1209$ & $-38$ & $10.8$ & $1.14$ & & $130$ & $430$ & $1.00$ \\
+10 & $-10.5$ & $15$   & $-85$ & $0.15$ & $0.10$ & & $5$   & $52$  & $0.16$ \\
+\bottomrule
+\end{tabular}
+\caption{Simulation and NMR quantities in the two-site analysis
+  (Eq.~\ref{eq:twosite}) for the $50\%$ oil-body sample: phytate valence $z$,
+  Henry constant $K_\text{H}$ (Eq.~\ref{eq:KH}), lateral coefficient $\alpha=2\hat
+  a_2/(k_BT d^2)$, the Henry bound fraction $f_\text{H}=aK_\text{H}$, and the gvdW
+  bound fraction $f_\text{gvdW}$ (Eq.~\ref{eq:isotherm}).  $K_\text{H}$ includes the
+  non-electrostatic contact term and so is weakly attractive even at pH~10.  Rates
+  $\Delta R_\text{free}$ (control) and $\Delta R_\text{obs}$ (oil body) in s$^{-1}$;
+  $f_\text{req}$ is the bound fraction the two-site model requires at $\Delta
+  R_\text{bound}=3\times10^{4}$\,s$^{-1}$.}
+\label{tab:gvdw}
+\end{table}
+
+\subsection{The \texorpdfstring{$\zeta$}{zeta}-potential fit}
+
+The correlation-corrected model is compared to the measured $\zeta$-potential over
+pH, phytate concentration and added salt (Fig.~\ref{fig:zeta}) with \emph{no
+parameter fitted to the $\zeta$ data}: the coverage, the potential shift and the
+shear plane all come from the simulation, and the single binding energy---the
+short-range non-electrostatic contact term---is fixed by the NMR.  The shear plane
+is the fixed-charge edge of the brush plus adsorbed phytate (the $2\%$-of-peak rule
+of Fig.~\ref{fig:mc}C), at $42$, $40$ and $36$\,\AA\ for pH~4, 6 and~10---the brush
+periphery, where the hydrodynamic slip of a polymer-coated particle sits.  Against
+the 39 measured means the model gives an RMS of $7.7$\,mV; weighting each point by
+its measurement error raises the residual to $15$\,mV, concentrated almost entirely
+at pH~4.  The bare-oil-body $\zeta$ that anchors each series is itself reproduced by
+the simulation: solving the same Poisson--Boltzmann relation for the MC peptide
+charge recovers the measured bare $\zeta$ and its salt screening at pH~4
+quantitatively, validating the brush electrostatics.  At pH~6 and~10 the
+coarse-grained brush carries a near-isoelectric sign error and a high-salt
+overscreening, so the bare $\zeta$ is taken from experiment and the model is tested
+on the phytate-induced shift alone.
+
+The agreement is strongly condition-dependent.  At pH~6 the model tracks both the
+phytate and the salt series within the experimental scatter, and at pH~10 it
+reproduces the salt series.  The pH-4 series carries by far the smallest error
+bars---$\zeta$ near the isoelectric point is measured to $\pm0.1$--$0.3$\,mV---and it
+is where the model fails: it holds at $+16$\,mV at $7.6$\,mM~PA while the data cross
+zero to $-4$\,mV.  The pH-4 charge reversal is not reproduced, and this is the honest
+edge of the faithful treatment: over-charging would require softening the
+phytate--phytate correlations over a range beyond their nearest-neighbour spacing,
+which the density-limited correlation correction forbids.  A weak pH-10 phytate
+effect (${\sim}5$--$10$\,mV more negative) is likewise not captured.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\textwidth]{../zeta/fig6_ccgvdw.png}
+\caption{Measured $\zeta$-potential (points, mean~$\pm$~SD) with the
+  correlation-corrected gvdW model (lines): (A) $\zeta$ vs.\ [PA] at low salt, one
+  model curve per pH; (C) $\zeta$ vs.\ [NaCl] at pH~4, 6 and~10, with the $0$ (black)
+  and $1.5$\,mM~PA (red) measurements.  In (C) the line is the model at $1.5$\,mM~PA,
+  which adds the simulated phytate shift to the measured bare-OB $\zeta$ (the $0$\,PA
+  points, its anchor).  No parameter is fitted to $\zeta$---the shear plane is the MC
+  fixed-charge edge of the brush and the binding is fixed by the NMR.  RMS $7.7$\,mV
+  (error-weighted $15$\,mV) over 39 points: pH~6 and the salt series fall within
+  experimental error, while the pH-4 charge reversal is not reproduced.}
+\label{fig:zeta}
+\end{figure}
+
+\subsection{The calorimetry}
+
+The correlation-corrected model fits the pH-4 thermogram about as well as the
+instrument's independent one-site model (Fig.~\ref{fig:itc}, Table~\ref{tab:itc}),
+and it is the more appropriate picture: phytate binds a charged brush, not a set of
+independent chemical sites.  The one-site stoichiometry $n=0.38$ is itself a fitted,
+concentration-coupled quantity---between $0.32$ and $0.45$ across the three
+replicates---not a measured count, and it carries no surface physics.  The cPB model
+instead \emph{fixes} the binding strength $K_\text{H}$ and the lateral repulsion
+$\hat a_2$ from the simulated PMF---the same $\hat a_2$ that governs the
+$\zeta$-potential and the NMR---so the binding is predicted rather than fitted,
+leaving only the enthalpy $\Delta H$ and the peptide-to-oleosin area free.  That is
+two free parameters against the one-site model's three, and the less correlated of
+the two (Table~\ref{tab:itc}).
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & one-site & cPB (MC) \\
+\midrule
+adsorption & independent sites & charged surface \\
+binding & $K_a=(2.5\pm0.8)\times10^{5}$\,M$^{-1}$ & $K_\text{H}$ \emph{fixed} (PMF) \\
+lateral $\hat a_2$ & absent & \emph{fixed} (PMF, Forsman) \\
+capacity & $n=0.38\pm0.03$ & area $=(3.0\pm0.1)\times10^{3}\,$\AA$^2$ \\
+$\Delta H$\,/\,kJ\,mol$^{-1}$ & $-47\pm5$ & $-34\pm1$ \\
+\midrule
+free parameters & 3 & \textbf{2} \\
+RMS\,/\,\textmu J & $5.9$ & $7.4$ \\
+\bottomrule
+\end{tabular}
+\caption{The instrument one-site model and the MC-grounded cPB model fit to the same
+  pH-4 thermogram (Fig.~\ref{fig:itc}) at the cell ionic strength ($\approx\!15$\,mM);
+  fitted values are $\pm1$ standard error from the fit covariance.  The one-site model
+  fills independent sites (stoichiometry $n$); the cPB model adsorbs phytate onto the
+  charged brush and \emph{fixes} the binding $K_\text{H}$ and the lateral repulsion
+  $\hat a_2$ from the simulated PMF, leaving only the area and $\Delta H$ free.  The
+  one-site parameters are strongly correlated ($K_a$--$\Delta H$ $0.88$,
+  $\Delta H$--$n$ $0.85$), so their values are poorly determined; the two-parameter
+  cPB fit is the more constrained (area--$\Delta H$ $0.59$).}
+\label{tab:itc}
+\end{table}
+
+The simulated binding transfers to the calorimetry only once the cell ionic
+strength is set correctly.  The 5\% oil-body cell carries oleosin and phospholipid
+counterions that raise the ionic strength to $\approx\!15$\,mM, far above the 3\,mM
+buffer; since $K_\text{H}$ is exponentially salt-sensitive, the buffer value would
+overstate the binding $\sim\!100$-fold, whereas at the cell value the simulated
+isotherm reproduces the thermogram directly (RMS $6.7$\,\textmu J), and floating the
+ionic strength returns $\approx\!18$\,mM.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{../itc/fig_itc_cpb.png}
+\caption{pH-4 ITC thermogram (points) with the MC-grounded cPB model (blue) and the
+  instrument one-site model (grey).  The cPB fit reads the binding from the simulated
+  PMF and reproduces the thermogram with only $\Delta H$ and an area free.}
+\label{fig:itc}
+\end{figure}
+
+One adsorption therefore underlies all three probes, each measured at its own ionic
+strength---the calorimetry at $\approx\!15$\,mM, the $\zeta$-potential after
+dilution, and the NMR at $0.15$\,M---with the model rooted in the simulated PMF and
+carrying no parameter fitted to the electrokinetic or calorimetric data.
+
+\bibliographystyle{unsrt}
+\bibliography{references}
+\end{document}

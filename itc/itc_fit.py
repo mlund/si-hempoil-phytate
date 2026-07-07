@@ -162,11 +162,10 @@ def _cpb_coverage(cfree_M: float, ionic: float, pH: float = 4.0, nit: int = 200)
     z = (1 - t) * cc.phytate_valence(pH, lo) + t * cc.phytate_valence(pH, hi)
     r = np.linspace(0, 180, 400)
     y0 = (1 - t) * cc._potential_grid(pH, lo, r) + t * cc._potential_grid(pH, hi, r)
-    sigma_bare = cc.sigma_from_zeta(cc.ZETA_BARE[pH], ionic)
     u = np.zeros_like(r)
     gamma = 0.0
     for _ in range(nit):
-        alpha = cc.lateral_alpha(ionic, z, sigma_bare - z * gamma)
+        alpha = cc.lateral_alpha(ionic, z, gamma)
         w_eff = w0 - z * np.interp(r_w, r, u)
         gamma += 0.15 * (cc._coverage(np.trapezoid(np.expm1(-w_eff), r_w), cfree_M, alpha) - gamma)
         excess = np.expm1(-w_eff).clip(0)
