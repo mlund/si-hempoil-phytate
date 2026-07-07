@@ -28,8 +28,23 @@ HERE = Path(__file__).parent
 # Syringe phytate concentration, identical at every pH (manuscript Section 2.2.8).
 PA_SYRINGE_M = 0.30e-3
 
-# The .xls export whose NanoAnalyze fit the manuscript reports, per pH.
+# Oleosin in the 5% w/w OB cell: ~1 umol/g wet (manuscript Section 3.3.2), which the
+# pH-4 and pH-6 mole-ratio columns both recover as ~48 uM. Used for the pH 6/10 summary
+# workbooks, whose own concentration columns are unreliable (the pH-10 sheet is off by
+# ~100x -- the manuscript confirms the same 0.30 mM PA / 5% OB setup at every pH).
+OLEOSIN_M = 47.8e-6
+VCELL_UL = 1200.0  # active cell volume (all files agree)
+
+# The .xls export whose NanoAnalyze fit the manuscript reports (only pH 4 was fitted).
 REPORTED = {4.0: "pH4/pH4_rep3.xls"}
+
+# Hand-tabulated per-injection summaries for pH 6 and 10 (no NanoAnalyze fit stored).
+# pH 6: 'Corrected Q' is already blank-subtracted. pH 10: subtract the PA-into-buffer
+# control sheet ourselves. Concentrations are taken from the manuscript, not the sheet.
+SUMMARY = {
+    6.0: {"path": "pH6/Summary_injections_pH6.xlsx", "vinj": "Inj Volume", "control": None},
+    10.0: {"path": "pH10/Summary_pH10.xlsx", "vinj": "inj volume", "control": "controls"},
+}
 
 # NanoAnalyze fit-parameter labels -> short keys.
 _FIT_LABELS = {"Kd (M)": "Kd", "n": "n", "ΔH (kJ/mol)": "dH", "Ka (Mˉ¹)": "Ka"}
@@ -133,9 +148,52 @@ def load_xls(path: str | Path, pH: float) -> Titration:
     )
 
 
+def _summary_col(frame: pd.DataFrame, needle: str) -> np.ndarray:
+    """Numeric data of the first column of ``frame`` whose header contains ``needle``."""
+    header = frame.iloc[0].astype(str)
+    j = next(i for i, v in enumerate(header) if needle.lower() in v.lower())
+    return pd.to_numeric(frame.iloc[1:, j], errors="coerce").to_numpy()
+
+
+def load_summary(pH: float, sheet: str = "rep1") -> Titration:
+    """Load a pH 6/10 summary workbook into a :class:`Titration`.
+
+    Concentrations are the manuscript values (PA_SYRINGE_M, OLEOSIN_M, VCELL_UL), not
+    the workbook's own columns. The pH-10 heats are blank-subtracted here (the rep
+    sheet holds the raw signal); the pH-6 'Corrected Q' is already blank-subtracted.
+    """
+    cfg = SUMMARY[pH]
+    xl = pd.ExcelFile(HERE / cfg["path"])
+    rep = xl.parse(sheet, header=None)
+    vinj_uL = _summary_col(rep, cfg["vinj"])
+    heat_uJ = _summary_col(rep, "Corrected Q")
+    if cfg["control"] is not None:  # pH 10: subtract the PA-into-buffer control
+        ctrl = xl.parse(cfg["control"], header=None).iloc[:, :9]
+        heat_uJ = heat_uJ - _summary_col(ctrl, "Corrected Q")
+
+    good = ~np.isnan(vinj_uL) & ~np.isnan(heat_uJ)
+    vinj_uL, heat_uJ = vinj_uL[good], heat_uJ[good]
+    moles_cell = OLEOSIN_M * VCELL_UL * 1e-6
+    cum_pa = PA_SYRINGE_M * np.cumsum(vinj_uL) * 1e-6  # mol
+    return Titration(
+        pH=pH,
+        mole_ratio=cum_pa / moles_cell,
+        heat_uJ=heat_uJ,
+        vinj_uL=vinj_uL,
+        vcell_uL=VCELL_UL,
+        csyr_M=PA_SYRINGE_M,
+        moles_cell=moles_cell,
+        na_fit={},  # no NanoAnalyze fit for pH 6/10
+        na_model_uJ=np.full_like(heat_uJ, np.nan),
+        source=Path(cfg["path"]).name,
+    )
+
+
 def load(pH: float = 4.0) -> Titration:
-    """Load the manuscript-reported titration for ``pH``."""
-    return load_xls(HERE / REPORTED[pH], pH)
+    """Load the titration for ``pH`` (pH 4 from the .xls export; pH 6/10 from summaries)."""
+    if pH in REPORTED:
+        return load_xls(HERE / REPORTED[pH], pH)
+    return load_summary(pH)
 
 
 if __name__ == "__main__":

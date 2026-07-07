@@ -36,6 +36,11 @@ I_ITC = 0.015
 _IMC = (0.005, 0.03, 0.15)  # MC ionic strengths available for PMF interpolation
 
 
+def ionic_for(pH: float) -> float:
+    """Cell ionic strength by pH; pH 10 additionally carries 1.5 mM NaCl (manuscript 2.2.8)."""
+    return I_ITC + (0.0015 if pH == 10.0 else 0.0)
+
+
 def _dilute(titr: itc_data.Titration) -> tuple[np.ndarray, np.ndarray]:
     """Total oleosin and phytate concentrations in the cell after each injection.
 
@@ -138,15 +143,17 @@ def _gvdw_bound(titr, area, grid, cov):
     return out
 
 
-def fit_gvdw(titr, ionic: float = I_ITC):
-    """Fit the MC-grounded gvdW isotherm to the raw thermogram at fixed ``ionic``.
+def fit_gvdw(titr, ionic: float | None = None):
+    """Fit the MC-grounded gvdW isotherm to the raw thermogram at the titration's pH.
 
     Only the area per oleosin and dH are fit; the binding strength is read from the
-    MC PMF, so this transfers the simulated adsorption to the calorimetry rather
-    than fitting it. Returns (area_A2, dH_kJ, rms_uJ).
+    MC PMF *at* ``titr.pH``, so this transfers the simulated adsorption to the
+    calorimetry rather than fitting it. ``ionic`` defaults to the pH-appropriate cell
+    value (pH 10 carries extra NaCl). Returns (area_A2, dH_kJ, rms_uJ).
     """
+    ionic = ionic_for(titr.pH) if ionic is None else ionic
     grid = np.logspace(-9, -2, 24)
-    cov = np.array([_gvdw_coverage(c, ionic) for c in grid])
+    cov = np.array([_gvdw_coverage(c, ionic, pH=titr.pH) for c in grid])
 
     def model(x, area, dH):
         return _heat_uJ(titr, _gvdw_bound(titr, area, grid, cov), dH)
@@ -176,24 +183,23 @@ def fit_gvdw_ionic(titr):
 
 
 if __name__ == "__main__":
-    t = itc_data.load(4.0)
-    print(
-        f"pH {t.pH} ITC ({t.source}), {len(t.heat_uJ)} injections, [oleosin]={t.mt0 * 1e6:.1f} uM\n"
-    )
+    # pH-4 one-site sanity check (the only pH the manuscript fitted).
+    t4 = itc_data.load(4.0)
+    Ka, dH, n, rms = fit_onesite(t4)
+    print(f"pH 4 one-site (independent) reproduction ({t4.source}):")
+    print(f"  mine        : Ka={Ka:.2e}/M  n={n:.3f}  dH={dH:.1f} kJ/mol  RMS={rms:.1f} uJ")
+    f = t4.na_fit
+    print(f"  NanoAnalyze : Ka={f['Ka']:.2e}/M  n={f['n']:.3f}  dH={f['dH']:.1f} kJ/mol")
+    print("  manuscript  : Ka=5e5/M  n=2.5(oleosin/PA => 0.40 PA/oleosin)  dH=-47 kJ/mol\n")
 
-    Ka, dH, n, rms = fit_onesite(t)
-    print("one-site (independent):")
-    print(f"  mine        : Ka={Ka:.3e}/M  n={n:.3f}  dH={dH:.1f} kJ/mol  RMS={rms:.1f} uJ")
-    f = t.na_fit
-    print(f"  NanoAnalyze : Ka={f['Ka']:.3e}/M  n={f['n']:.3f}  dH={f['dH']:.1f} kJ/mol\n")
-
-    area, dHc, rmsc = fit_gvdw(t, ionic=I_ITC)
-    print(
-        f"gvdW (MC binding, I={I_ITC * 1e3:.0f} mM): area={area:.0f} A^2/oleosin "
-        f"(~{area * 3e-3:.0f} peptide-equiv)  dH={dHc:.1f} kJ/mol  RMS={rmsc:.1f} uJ"
-    )
-    ieff, area2, dH2, rms2 = fit_gvdw_ionic(t)
-    print(
-        f"gvdW (MC binding, fit I): I={ieff * 1e3:.0f} mM  area={area2:.0f} A^2/oleosin  "
-        f"dH={dH2:.1f} kJ/mol  RMS={rms2:.1f} uJ"
-    )
+    # MC-grounded gvdW transferred to every pH: binding from the PMF, only area + dH fit.
+    print("gvdW (MC binding transferred; area + dH fit) at all measured pH:")
+    print(f"  {'pH':>4} {'I/mM':>6} {'n_inj':>6} {'area/A^2':>9} {'dH/kJ':>7} {'RMS/uJ':>7}")
+    for pH in (4.0, 6.0, 10.0):
+        t = itc_data.load(pH)
+        ionic = ionic_for(pH)
+        area, dHc, rmsc = fit_gvdw(t)
+        print(
+            f"  {pH:>4g} {ionic * 1e3:>6.1f} {len(t.heat_uJ):>6} "
+            f"{area:>9.0f} {dHc:>7.1f} {rmsc:>7.1f}"
+        )
