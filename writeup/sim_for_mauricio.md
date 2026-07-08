@@ -66,8 +66,9 @@ attraction alone would predict, and it sets how far the surface can be overcharg
 
 **Acidic binding overcharges the surface — the origin of the $\zeta$ reversal.**
 At pH 4 the balance tips far enough that phytate adsorbs *past* neutralization:
-each molecule carries $z \approx -7$, so once the adsorbed charge exceeds the bare
-surface charge the sign of the surface charge inverts. This charge inversion
+each molecule carries $z \approx -7$ at the surface (Figure X, panel D; the bulk value
+is $\approx -6$), so once the adsorbed charge exceeds the bare surface charge the sign
+of the surface charge inverts. This charge inversion
 (overcharging) is the mechanism behind the measured $\zeta$-potential crossing from
 $+38$ mV to $-4$ mV as phytate is added (Figure 6A). It is self-limiting: as the
 surface charges negative, the local potential opposes further anion binding, so the
@@ -88,9 +89,10 @@ not adsorption.
 
 *NMR.* The NMR bound fraction follows **directly from the simulated free energy**, with
 no fitted parameter. The potential of mean force gives the surface partition length
-$K_H=\int(e^{-w/k_BT}-1)\,dr$ at 0.15 M, and the oil-body specific area
-$a=6\phi_\text{OB}/d_{43}$ ($\phi_\text{OB}$ the volume fraction, $d_{43}$ the droplet
-diameter) turns it into the bound fraction $f_\text{bound}=\Gamma a/n_B$ ($\Gamma$ the
+$K_H=\int(e^{-w/k_BT}-1)\,dr$ at 0.15 M, and the oil-body specific surface area
+$a=6\phi_\text{OB}/d_{43}$ ($\phi_\text{OB}$ the volume fraction, $d_{43}$ the
+volume-weighted mean droplet diameter) turns it into the bound fraction
+$f_\text{bound}=\Gamma a/n_B$ ($\Gamma$ the
 areal coverage, $n_B$ the bulk phytate density), which enters the two-site fast-exchange
 relation $\Delta R_\text{obs}=f_\text{bound}\Delta R_\text{bound}+(1-f_\text{bound})
 \Delta R_\text{free}$, with $\Delta R = R_{1\rho}-R_1$. Carried this way — the simulated
@@ -129,7 +131,7 @@ ratio … inter-droplet cross-linking at low PA and direct surface adsorption at
 [PA]" (§3.3.2). The isotherm framework is sound and would quantify surface binding from a
 cleaner, non-aggregating measurement (SI §S-6).
 
-The mean-field treatment has two limitations. It captures the regulation
+The mean-field treatment has one important limitation. It captures the regulation
 feedback — binding weakening as the surface charges up — but smears the adsorbed
 layer, so it omits the discrete phytate–phytate correlations that matter at low salt,
 where the double layer is thick relative to the inter-phytate spacing. There the
@@ -362,14 +364,13 @@ lateral repulsion between adsorbed molecules already caps it below that limit. T
 fraction is $f_\text{bound}=\Gamma a/n_B$, where $a=6\phi_\text{OB}/d_{43}$ is the
 oil-body specific surface area ($\phi_\text{OB}$ the droplet volume fraction, $d_{43}$
 the reported volume-weighted mean diameter); it reduces to $a K_H$ only as $\Gamma\to0$.
-Strictly $a=6\phi_\text{OB}/d_{32}$ with the surface-weighted (Sauter) mean $d_{32}\le
-d_{43}$, so using the reported $d_{43}$ slightly underestimates $a$; because $a$ scales
-$f_\text{bound}$ uniformly across pH, this shifts the absolute level a little but not the
-pH ordering or the agreement in Table N. This
-$f_\text{bound}$ enters the two-site fast-exchange relation of the main text (§3.3.4)
-with no adjustable parameter, and matches the fraction the exchange requires at every pH
-(main-text Table N). Because $K_H$ is read at the measured salt, nothing is transferred
-across ionic strength.
+This $f_\text{bound}$ enters the two-site fast-exchange relation of the main text
+(§3.3.4) with no adjustable parameter, and matches the fraction the exchange requires at
+every pH (main-text Table N). Because $K_H$ is read at the measured salt, nothing is
+transferred across ionic strength. (Strictly $a=6\phi_\text{OB}/d_{32}$ with the
+surface-weighted Sauter mean $d_{32}\le d_{43}$, so the reported $d_{43}$ slightly
+underestimates $a$; since $a$ scales $f_\text{bound}$ uniformly across pH, this shifts the
+absolute level a little, not the pH ordering.)
 
 **Free-tumbling reference.** The remainder of this section details the reference
 $\Delta R_\text{free}$.
