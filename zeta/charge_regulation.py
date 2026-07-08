@@ -1,75 +1,43 @@
 #!/usr/bin/env python3
 """Charge-regulated Poisson-Boltzmann (CR-PB) interpretation of the OB data.
 
-An alternative to the gvdW model. The gvdW reconciles ITC, NMR and the pH 6/10
-zeta + salt series, but cannot reproduce the pH-4 zeta charge-reversal
-(+37.7 -> -4.4 mV): its coverage-based correlation hole self-limits the coverage
-below neutralisation, so the mean-field double layer never inverts. Here we ask
-whether a *charge-regulated* flat surface -- phytate (z = -|z|) adsorbing on
-Langmuir sites that regulate the surface charge -- can capture the reversal while
-still fitting ITC and NMR, fed the same MC-derived quantities.
+A flat Gouy-Chapman surface on which phytate (valence z = -|z|) adsorbs to Langmuir
+sites that regulate the surface charge. Each adsorbed anion lowers the local potential
+and suppresses the next (regulation feedback), so the self-consistent coverage can settle
+*past* neutralisation -- overcharging -- which inverts the diffuse-layer sign and
+reproduces the pH-4 zeta charge reversal (+37.7 -> -4.4 mV). The overcharge is
+self-limiting, so no correlation term is needed.
 
-The mechanism the gvdW lacks: an intrinsic site affinity K holds phytate even
-against a modestly reversed potential, so the self-consistent coverage settles
-*past* neutralisation (sigma_eff < 0) -- overcharging -- rather than stopping at
-it. Overcharging is self-limiting because each adsorbed anion lowers the local
-potential and suppresses the next (the regulation feedback), so no diverging
-correlation term is needed.
+The MC feeds two quantities, reflecting the brush *dipole* (cationic N-terminus at the
+outer binding edge, anionic anchor at the wall):
 
-MC feeds two distinct quantities (the brush is a *dipole*: cationic N-terminus at
-the outer binding edge, anionic anchor at the wall):
+  * binding-plane potential psi_beta -- the MC local potential at the brush periphery
+    (potential_profiles.csv at r ~ R_BETA). Positive at the binding edge (+52/+5 mV,
+    pH 4/6, low salt) even where the net monopole is ~0 or negative, so it *drives
+    binding* at pH 6 where a net-charge Grahame surface would predict none; strongly
+    negative at pH 10 (-89 mV) -> no binding.
+  * net surface charge sigma0 -- from the measured bare (0-PA) zeta via the Grahame
+    equation. It sets the diffuse-layer zeta and the overcharging,
+    sigma_eff = sigma0 - |z| Gamma.
 
-  * binding-plane potential psi_beta -- the MC local potential at the brush
-    periphery (potential_profiles.csv, r ~ R_BETA). It carries the dipole: positive at the
-    binding edge (+52/+5 mV, pH 4/6, low salt) even where the net monopole is ~0
-    or negative, so it *drives binding* at pH 6 where a net-charge Grahame surface
-    would predict none. Strongly negative at pH 10 (-89 mV) -> no binding.
-  * net surface charge sigma0 -- from the measured bare (0-PA) zeta via the
-    Grahame equation (monopole). It sets the diffuse-layer zeta and the
-    overcharging: sigma_eff = sigma0 - |z| Gamma.
+So the dipole drives *binding*, the monopole + regulation drive *zeta*.
 
-So the dipole drives *binding*, the monopole + regulation drive *zeta*. At pH 6
-sigma0 < 0, the dipole still binds phytate, and the adsorbed z=-7 anion pushes
-sigma_eff (hence zeta) further negative -- the measured trend.
+One parameter: K, the intrinsic Langmuir affinity (Gamma_max is a geometric
+close-packing prior, 1/(11 A)^2). K is the *non-electrostatic* part of the binding --
+the electrostatics are already carried by psi_beta and sigma_eff, so K is not the MC
+Henry constant K_H = int(e^{-w}-1)dr (which packs the full PMF and would double-count
+them). K reflects the pH-set peptide/phytate ionisation and is nearly salt-independent,
+so it is fit per pH to each zeta-vs-[PA] series and held across salt. (eps_ne, an
+equivalent contact affinity in the exponent, is degenerate with K and kept off by
+default.)
 
-One primary parameter, K (intrinsic Langmuir constant); Gamma_max is pinned by a
-geometric close-packing prior 1/(11 A)^2. K reflects the peptide/PA ionisation, set by
-pH and nearly salt-independent, so it is fit PER pH to each zeta-vs-[PA] series (not
-globally, which would force one chemistry across pH 4/6/10) and held fixed across salt.
-The CR-PB then has two uses: (1) computing the zeta-potential / overcharge from the MC,
-and (2) providing an isotherm to FIT the ITC thermogram (K, area, dH free -- see
-fit_itc). It is NOT used for NMR, which is read from the MC PMF directly (see nmr_f and
-the Scope note below). The pH-dependent electrostatics (psi_beta dipole, sigma0
-monopole) come from the MC; K adds only the pH-specific contact chemistry.
-
-Note what K is NOT: it is not the MC Henry constant K_H = int(e^{-w}-1)dr. That K_H
-packs the *full* PMF -- electrostatics + excluded volume + contact -- into one
-number; feeding it as the site constant here double-counts the electrostatics (which
-PB already carries through psi_beta and sigma_eff) and blows up the low-salt
-overcharge (pH-4 zeta -> ~-150 mV). K is instead the *non-electrostatic* part of the
-binding (electrostatics handled by PB): essentially K_H with the electrostatic PMF
-stripped out, i.e. the same contact content the gvdW packages as EPS_NONEL. That
-non-electrostatic K is the SAME physical quantity as eps_ne below -- one written
-multiplicatively, the other in the exponent -- which is why they are degenerate (the
-__main__ sweep confirms it). So the CR model has exactly ONE non-electrostatic affinity.
-
-Scope -- what the CR-PB does and does NOT carry. The mean-field enhancement
-exp(z psi_beta/kT) with z ~ 6 is far too salt-steep: a K fit to the low-salt zeta
-overcharge under-binds the 0.15 M NMR by ~2x and (at the physical grafting density) the
-ITC by ~10x. This is a salt-SLOPE error in psi_beta, not a missing affinity (eps_ne is
-degenerate with K, so it cannot change the slope). The fix is not to patch the CR-PB but
-to use the right input for each probe: NMR is a bound fraction at one salt, so it is read
-from the MC PMF DIRECTLY -- K_H = int(e^{-w}-1)dr at 0.15 M -> gvdW isotherm (nmr_f),
-parameter-free, matching f_req at all pH without any transfer from the zeta conditions.
-The CR-PB is used ONLY for the zeta overcharge / reversal, which the direct PMF cannot
-produce (mean-field PB does not invert a double layer).
-
-The ITC is genuinely out of scope: at the physical grafting density the pH-4 coverage
-is overcharge-limited to ~0.03 PA/oleosin, while the thermogram needs ~10x more, so
-the ITC heat reflects inter-droplet cross-linking / aggregation (the multiphasic
-shoulder the experiment reports), not monolayer adsorption -- robustly, independent of
-the (tuned) ITC ionic strength. eps_ne is kept as a knob (default 0, unidentifiable)
-only to document the degeneracy -- which is why NMR is read from the PMF, not fitted here.
+The CR-PB has two uses: (1) computing the zeta-potential / overcharge from the MC, and
+(2) providing an isotherm to fit the ITC thermogram (K, area, dH free -- see fit_itc).
+NMR is not taken through the CR-PB: a bound fraction at a single salt is read from the MC
+PMF directly (K_H = int(e^{-w}-1)dr -> Nordholm gvdW isotherm, nmr_f), parameter-free.
+The ITC heat is out of scope: at the physical grafting density the pH-4 coverage is
+overcharge-limited to ~0.03 PA/oleosin while the thermogram needs ~10x more, so the heat
+reflects inter-droplet cross-linking / aggregation, not monolayer adsorption.
 """
 
 from __future__ import annotations
@@ -92,7 +60,7 @@ LB = gv.LB
 N_A = constants.N_A
 
 # Binding plane = brush periphery / PMF-minimum region, where the MC dipolar
-# potential is read (same position as the gvdW contact well, R_CONTACT).
+# potential is read (the contact position R_CONTACT).
 R_BETA = gv.R_CONTACT  # A
 # Bare zeta was measured at low salt; sigma0 (a surface property, ~salt-independent
 # in e/A^2) is fixed there and carried to every ionic strength via Grahame.
@@ -237,8 +205,8 @@ def fit_K(pH: float, eps_ne: float = EPS_NE) -> float:
 
     When adsorption does not improve the zeta fit (pH 10: the series is flat in [PA],
     so the double layer never inverts and zeta is insensitive to K), K is
-    unidentifiable and a free fit runs to the bound; we return 0 (no binding) so the
-    transferred NMR/ITC predictions are not driven by a spurious runaway K.
+    unidentifiable and a free fit runs to the bound; we return 0 (no binding) rather than
+    a spurious runaway K.
     """
     sol = minimize_scalar(
         lambda logK: _zeta_chi2(pH, 10**logK, eps_ne),
@@ -261,7 +229,7 @@ def eps_degeneracy(pH: float = 4.0, eps_grid=(0.0, 1.0, 2.0, 3.0, 4.0)):
     """Show eps_ne is degenerate with K at one pH: refit K at each eps, read K, the CR-PB
     coverage bound fraction, and chi^2. K*exp(eps_ne), the zeta chi^2 and the CR-PB
     coverage are all invariant -- a salt-robust contact affinity is unidentifiable, so it
-    cannot rescue the transferred binding; NMR is therefore read from the PMF directly.
+    adds nothing; NMR is read from the PMF directly (nmr_f).
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "nmr"))
     import binding_fraction as nb  # noqa: E402
@@ -361,14 +329,12 @@ def nmr_f(
     phi: float = 0.5,
     d43_um: float = 3.0,
 ) -> float:
-    """NMR bound fraction from the MC PMF DIRECTLY (not through the CR-PB).
+    """NMR bound fraction from the MC PMF directly (not through the CR-PB).
 
     NMR is a bound fraction at a single salt, so the simulated PMF at that salt is the
-    faithful, parameter-free input: K_H = int(e^{-w}-1)dr from the MC PMF (with the
-    shared non-electrostatic contact well already folded in), fed to the gvdW isotherm.
-    This avoids the CR-PB mean-field psi_beta reconstruction and its salt-transfer
-    over-screening, which the CR-PB carries only for the zeta overcharge, not for a bound
-    fraction (see module docstring). No fitted K enters.
+    direct, parameter-free input: K_H = int(e^{-w}-1)dr from the MC PMF (with the shared
+    non-electrostatic contact well folded in), fed to the Nordholm gvdW isotherm
+    (binding_fraction.bound_fraction). No fitted parameter enters.
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "nmr"))
     import binding_fraction as nb  # noqa: E402
@@ -458,7 +424,7 @@ def plot_crpb(K_by_pH: dict[float, float], eps_ne: float, path: Path) -> None:
     # Absolute prediction (not anchored to the measured bare salt curve): zeta comes
     # straight from crpb_state = psi_d(sigma_eff, ionic), so both the bare salt decay
     # and the phytate shift are predicted. The residual (~10 mV at pH 6 high salt) is
-    # the flat-Grahame-vs-permeable-brush limitation, shared with the gvdW.
+    # the flat-Grahame-vs-permeable-brush limitation of the mean-field surface.
     nacl_fine = np.linspace(1.0, 100.0, 200)
     for pH in PHS:
         c, K = colors[pH], K_by_pH[pH]

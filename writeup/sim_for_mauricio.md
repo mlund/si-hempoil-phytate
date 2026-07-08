@@ -389,7 +389,8 @@ evaluated at $I=0.15$ M. The PMF used here includes the same fixed short-range c
 term used throughout the adsorption analysis (a salt-robust $2.5\,k_BT$ well at the
 brush-contact position); this term was set before comparison with the NMR relaxation
 data. The areal coverage $\Gamma$ follows from a two-dimensional
-generalized-van-der-Waals isotherm. In the dilute (Henry) limit $\Gamma\to K_H\,n_B$
+generalized-van-der-Waals isotherm (Nordholm et al., 2018). In the dilute (Henry) limit
+$\Gamma\to K_H\,n_B$
 ($n_B$ the bulk phytate number density), but at the measured 7.6 mM phytate the adsorbed
 anions crowd and repel, so the coverage fraction $\theta=\Gamma d^2$ (phytate hard-disk
 diameter $d$) solves the implicit isotherm
@@ -527,6 +528,9 @@ All simulation input files, modelling and analysis scripts are available at
   329–345. https://doi.org/10.1103/RevModPhys.74.329
 - Landrum, G., et al. RDKit: Open-source cheminformatics.
   https://doi.org/10.5281/zenodo.591637
+- Nordholm, S., Forsman, J., Woodward, C., Freasier, B., & Abbas, Z. (2018).
+  *Generalized van der Waals Theory of Molecular Fluids in Bulk and at Surfaces*.
+  Elsevier. ISBN 978-0-12-811136-9.
 - Stenqvist, B., Thuresson, A., Kurut, A., Vácha, R., & Lund, M. (2013). Faunus — a
   flexible framework for Monte Carlo simulation. *Mol. Simul.* **39**, 1233–1239.
   https://doi.org/10.1080/08927022.2013.828207
