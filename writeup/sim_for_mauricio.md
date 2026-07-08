@@ -44,7 +44,7 @@ prediction the experiments alone cannot make: that acidic phytate binding drives
 simulation output — the potential of mean force, the phytate charge, the electric
 potential, and the rotational mobility, by pH.
 
-![Low-salt (5 mM) simulation composite by pH: (A) potential of mean force $w(r)$, (B) relative rotational mobility $D(r)/D_0$, (C) electric potential with simulated (open) and measured (filled) $\zeta$, (D) phytate charge, versus distance $r$ from the grafted wall.](../mc/composite_lowsalt.png)
+![Low-salt (5 mM) simulation composite by pH: (A) potential of mean force $w(r)$, (B) relative rotational mobility $D(r)/D_0$, (C) electric potential with simulated (open) and measured (filled) $\zeta$, (D) phytate charge, versus distance $r$ from the grafted wall.](../mc/composite_I0.005.png)
 
 **A cationic patch binds phytate even where the net charge vanishes.** The ionizable
 oleosin termini raise the *local* electric potential at the brush periphery well
@@ -86,39 +86,26 @@ binding off. At pH 10 the simulated interaction is repulsive, matching the negli
 direct binding; the high-phytate destabilization there is double-layer compression,
 not adsorption.
 
-*Calorimetry.* The simulated binding reproduces the pH-4 thermogram (SI §S-6),
-returning a binding enthalpy $\Delta H = -34 \pm 2$ kJ mol⁻¹ and a peptide-to-oleosin
-area of $(5.2 \pm 0.2)\times10^{3}$ Å² (RMS 7.3 µJ). This description is both more
-physical and better determined than the instrument's independent one-site fit, for two
-reasons. First, the physics: phytate adsorbs onto a charged, self-regulating surface,
-not a set of independent chemical sites, and the model *fixes* the binding affinity
-from the electrophoretic data rather than fitting it — leaving only the area and
-$\Delta H$ free, two parameters against the one-site model's three. Second, the fit
-statistics: those two parameters are weakly correlated (area–$\Delta H$ correlation
-0.62), whereas the one-site $K_a$, $\Delta H$ and $n$ are strongly correlated
-($K_a$–$\Delta H$ 0.88, $\Delta H$–$n$ 0.85), which leaves its enthalpy poorly
-determined. The charge-regulated $\Delta H$ is therefore the more reliable estimate.
+*NMR.* The NMR bound fraction follows **directly from the simulated free energy**, with
+no fitted parameter. The potential of mean force gives the surface partition length
+$K_H=\int(e^{-w/k_BT}-1)\,dr$ at 0.15 M, and the oil-body specific area
+$a=6\phi_\text{OB}/d_{43}$ ($\phi_\text{OB}$ the volume fraction, $d_{43}$ the droplet
+diameter) turns it into the bound fraction $f_\text{bound}=\Gamma a/n_B$ ($\Gamma$ the
+areal coverage, $n_B$ the bulk phytate density), which enters the two-site fast-exchange
+relation $\Delta R_\text{obs}=f_\text{bound}\Delta R_\text{bound}+(1-f_\text{bound})
+\Delta R_\text{free}$, with $\Delta R = R_{1\rho}-R_1$. Carried this way — the simulated
+thermodynamics taken straight to the observable — $f_\text{bound}$ matches the value the
+exchange requires at every pH (Table N). This is the most direct of the three links:
+no isotherm fit, no transfer across salt, just the free energy at the measured condition.
 
-*NMR.* The simulation connects to the relaxation through the coverage. The potential
-of mean force fixes the adsorbed coverage $\Gamma$ through the isotherm, hence the
-bound fraction $f_\text{bound}=\Gamma a/n_B$ ($a=6\phi_\text{OB}/d_{43}$ the oil-body
-specific area, $n_B$ the bulk phytate density), which enters the two-site
-fast-exchange relation $\Delta R_\text{obs}=f_\text{bound}\Delta R_\text{bound}
-+(1-f_\text{bound})\Delta R_\text{free}$, with $\Delta R = R_{1\rho}-R_1$. The
-simulated $f_\text{bound}$ reproduces the measured order of binding across pH
-($4 > 6 > 10$) but is about twofold below the value the exchange requires (Table N);
-that magnitude is sensitive to the droplet size $d_{43}$ and the assumed fully-bound
-rate $\Delta R_\text{bound}$.
+Table N. Bound fraction from the MC PMF at 0.15 M, 7.6 mM PA ($K_H$ the surface partition
+length, $f_\text{req}$ the fraction the two-site model requires).
 
-Table N. Simulated versus required bound fraction at 0.15 M, 7.6 mM PA ($z$ the
-adsorption-weighted valence, $\psi_\beta$ the binding-plane potential, $K$ the
-intrinsic affinity).
-
-| pH | $z$ | $\psi_\beta$ / mV | $K$ / M⁻¹ | $f_\text{bound}$ (sim) / % | $f_\text{req}$ / % |
-|----|-----|-------------------|-----------|----------------------------|--------------------|
-| 4  | $-6.0$  | $+14.4$ | 64                | 0.54 | 1.33 |
-| 6  | $-7.5$  | $+8.6$  | $2.9\times10^{4}$ | 0.68 | 1.00 |
-| 10 | $-10.6$ | $-2.8$  | 0                 | 0    | 0.16 |
+| pH | $K_H$ / Å | $f_\text{bound}$ (sim) / % | $f_\text{req}$ / % |
+|----|-----------|----------------------------|--------------------|
+| 4  | 925  | 1.30 | 1.33 |
+| 6  | 1209 | 1.05 | 1.00 |
+| 10 | 17   | 0.11 | 0.16 |
 
 The simulation also explains why a bound phytate still relaxes like a mobile species.
 Its rotational mobility relative to the free molecule, $D(r)/D_0$ (Figure X, panel B),
@@ -129,6 +116,18 @@ consistent with the absent cross-polarization signal. A bare-hydrodynamic estima
 supports a single free-tumbling reference $\Delta R_\text{free}$: free phytate tumbles
 near-isotropically with $\tau_r \approx 134$–$147$ ps and little variation across
 protonation states (SI §S-5).
+
+*Calorimetry.* Both isotherms fit the pH-4 thermogram — the instrument's one-site
+model and the charge-regulated model equally well (SI §S-6) — yet neither is consistent
+with the surface. Each needs $\approx 0.38$ phytate bound per oleosin to account for the
+heat, but the overcharge that $\zeta$ and NMR independently confirm caps the surface at
+$\approx 0.03$ phytate per oleosin. No surface-adsorption fit can close this ~13-fold
+gap: the heat is an order of magnitude larger than a self-regulating monolayer can
+produce. Most of it must therefore arise off the surface — plausibly the inter-droplet
+cross-linking the calorimetry already invokes for its "shoulder at $\sim 0.3$ molar
+ratio … inter-droplet cross-linking at low PA and direct surface adsorption at higher
+[PA]" (§3.3.2). The isotherm framework is sound and would quantify surface binding from a
+cleaner, non-aggregating measurement (SI §S-6).
 
 The mean-field treatment has two limitations. It captures the regulation
 feedback — binding weakening as the surface charges up — but smears the adsorbed
@@ -146,10 +145,14 @@ adsorbed phytate layer. At pH 4 this balance tips to **overcharging** — phytat
 adsorbs past neutralization and inverts the surface charge — which drives the
 destabilization and oil release. At pH 6 the binding is weaker and salt-screened,
 adding negative charge that stabilizes the emulsion, while at pH 10 direct binding is
-negligible and the double layer governs behavior. The model reproduces the $\zeta$
-reversal, the calorimetric thermogram and the pH order of the NMR binding, and it
-locates its own limits (the NMR magnitude, and low-salt correlations) with the
-simulation as the reference.
+negligible and the double layer governs behavior. The charge-regulated model reproduces
+the $\zeta$ reversal, and the NMR bound fraction follows quantitatively from the
+simulated free energy at every pH with no fitted parameter. The same simulations show
+why the calorimetry resists a binding fit — the overcharge caps the surface coverage far
+below what the measured heat needs, so most of the heat must arise off the surface,
+plausibly inter-droplet cross-linking — reconciling the thermogram with the other two
+probes. Where mean field is expected to
+slip, at low salt, the simulation is the reference.
 
 ---
 
@@ -275,15 +278,20 @@ charge, $|z| e\,\Gamma\theta > |\sigma_0|$. With $|z|\approx 7$ each phytate fli
 large charge, so inversion is efficient and self-limiting: as $\psi_d$ crosses zero
 the Boltzmann factor suppresses further binding (Grosberg et al., 2002).
 
-**One affinity per pH.** $K$ is the intrinsic (non-electrostatic) affinity; the
+**Two roles, and the affinity $K$.** The model serves two purposes: it computes the
+$\zeta$-potential from the simulation (the pH-4 overcharge), and it provides an isotherm
+to fit the calorimetry. $K$ is the intrinsic (non-electrostatic) affinity — the
 electrostatics are already carried by $\psi_\beta$ and $\sigma_\text{eff}$, so $K$ is
 *not* the simulated Henry constant (using that would double-count the electrostatics).
-$K$ reflects the pH-set protonation of the oleosin and phytate groups and is nearly
-salt-independent, so it is fit once per pH to the $\zeta$-versus-[PA] series, held
-fixed across salt, and transferred to calorimetry and NMR. The saturation coverage
-$\Gamma_\text{max}=1/(11\ \text{Å})^2$ is a geometric close-packing prior. The
-$\zeta$ sample is diluted 1000-fold, so its coverage is the isotherm re-equilibrated
-at $[\text{PA}]/1000$.
+It reflects the pH-set protonation of the oleosin and phytate groups and is nearly
+salt-independent. For the $\zeta$-potential it is fit once per pH to the
+$\zeta$-versus-[PA] series and held across salt (Table S-3a). For the calorimetry it is
+fit freely, together with the surface area, as an independent test of whether a
+surface-adsorption isotherm can describe the heat at all (§S-6). The NMR does not use
+this model: its bound fraction comes directly from the simulated free energy (§S-5).
+The saturation coverage $\Gamma_\text{max}=1/(11\ \text{Å})^2$ is a geometric
+close-packing prior. The $\zeta$ sample is diluted 1000-fold, so its coverage is the
+isotherm re-equilibrated at $[\text{PA}]/1000$.
 
 **Scope and validity.** The mean field captures the regulation feedback but smears the
 adsorbed layer, omitting discrete phytate–phytate correlations (Grosberg et al.,
@@ -339,11 +347,32 @@ drives adsorption.
 
 ![Simulation composite at $I = 0.15$ M. The measured $\zeta$ marker is the highest available salt (100 mM added NaCl); the series does not extend to 150 mM, so it overstates $|\zeta|$ relative to the simulation, which over-screens at high salt.](../mc/composite_I0.15.png)
 
-## §S-5 Free-phytate hydrodynamics
+## §S-5 NMR bound fraction and free-phytate hydrodynamics
 
-The two-site analysis of the bound fraction, and the simulated versus required
-values, are given in the main text (§3.3.4, Table N). This section details the
-free-tumbling reference $\Delta R_\text{free}$.
+**Bound fraction from the free energy.** The NMR link is parameter-free. Integrating the
+simulated potential of mean force $w(r)$ over the adsorption region gives the surface
+partition length (a Henry constant with units of length),
+
+$$K_H=\int\big(e^{-w(r)/k_BT}-1\big)\,dr ,$$
+
+evaluated at $I=0.15$ M. The areal coverage $\Gamma$ then follows from the same
+isotherm used throughout: in the dilute (Henry) limit $\Gamma\to K_H\,n_B$ with $n_B$
+the bulk phytate number density, but at the measured 7.6 mM phytate the like-charge
+lateral repulsion between adsorbed molecules already caps it below that limit. The bound
+fraction is $f_\text{bound}=\Gamma a/n_B$, where $a=6\phi_\text{OB}/d_{43}$ is the
+oil-body specific surface area ($\phi_\text{OB}$ the droplet volume fraction, $d_{43}$
+the reported volume-weighted mean diameter); it reduces to $a K_H$ only as $\Gamma\to0$.
+Strictly $a=6\phi_\text{OB}/d_{32}$ with the surface-weighted (Sauter) mean $d_{32}\le
+d_{43}$, so using the reported $d_{43}$ slightly underestimates $a$; because $a$ scales
+$f_\text{bound}$ uniformly across pH, this shifts the absolute level a little but not the
+pH ordering or the agreement in Table N. This
+$f_\text{bound}$ enters the two-site fast-exchange relation of the main text (§3.3.4)
+with no adjustable parameter, and matches the fraction the exchange requires at every pH
+(main-text Table N). Because $K_H$ is read at the measured salt, nothing is transferred
+across ionic strength.
+
+**Free-tumbling reference.** The remainder of this section details the reference
+$\Delta R_\text{free}$.
 
 A bare-hydrodynamic estimate (RDKit conformer ensembles, Landrum et al., with
 Rotne–Prager–Yamakawa bead mobilities — the GRPY method of Zuk et al., 2018, via the
@@ -370,26 +399,41 @@ neglected).
 
 ## §S-6 Calorimetry
 
-Figure S (below) shows the pH-4 thermogram (replicate mean $\pm$ SD) with
-the charge-regulated model and the one-site model. The charge-regulated fit takes its
-affinity from the electrophoretic data, leaving only the area and the enthalpy free;
-its parameters are less correlated than the one-site model's (Table S-6).
+Both models fit the pH-4 thermogram well. The one-site (independent-sites) model returns
+$n=0.38$ phytate per oleosin, and the charge-regulated model — used here in its second
+role, as an adsorption isotherm fit *freely* to the heat (affinity $K$, surface area and
+enthalpy all free) — reproduces it about as well (RMS 6.6 versus 5.9 µJ, Figure S). Yet
+both imply the same physically impossible coverage.
 
 ![pH-4 ITC thermogram: experiment (replicate mean $\pm$ SD), the charge-regulated model (solid), and the one-site model (dashed).](../itc/fig_itc_crpb.png)
 
-Table S-6. One-site versus charge-regulated fit to the pH-4 thermogram (uncertainties
-are $\pm1$ standard error from the fit covariance).
+The heat demands $\approx 0.38$ phytate bound per oleosin — the one-site $n$, and the
+amount the charge-regulated fit also needs to match the enthalpy. But the overcharge
+that $\zeta$ and NMR independently confirm caps the surface at $\approx 0.03$ phytate per
+oleosin: a self-regulating monolayer cannot hold the ~13× more phytate the heat requires.
+The two models absorb this gap in opposite, equally telling ways (Table S-6). The
+charge-regulated fit inflates the peptide-to-oleosin area to $\approx 7\times10^{3}$ Å²,
+**21×** the physical grafting density (338 Å² per oleosin, the same value in the
+simulated brush and in the measured $\sim 1$ µmol oleosin g⁻¹), and the affinity and
+area are almost perfectly anti-correlated ($-0.93$), so the fit cannot separate binding
+strength from capacity. The one-site model, blind to the surface, buries the discrepancy
+in an abstract stoichiometry. Either way the excess heat cannot be monolayer binding;
+the calorimetry's own multiphasic shoulder (§3.3.2) points to inter-droplet cross-linking
+as the most likely source. The isotherm framework itself is sound and would quantify
+surface binding from a cleaner, non-aggregating measurement.
+
+Table S-6. Free fits of the two models to the pH-4 thermogram (uncertainties are $\pm1$
+standard error from the fit covariance; the physical grafting area 338 Å² is *not* a
+fit).
 
 |                       | one-site (independent) | charge-regulated (CR-PB) |
 |-----------------------|------------------------|--------------------------|
 | adsorption            | independent sites      | charge-regulated surface |
-| binding               | $K_a=(2.5\pm0.8)\times10^{5}$ M⁻¹ | $K=64$ M⁻¹ (fixed from $\zeta$) |
-| lateral repulsion     | absent                 | regulation feedback $\psi(\theta)$ |
-| capacity              | $n=0.38\pm0.03$        | area $=(5.2\pm0.2)\times10^{3}$ Å² |
-| $\Delta H$ / kJ mol⁻¹ | $-47\pm5$         | $-34\pm2$ |
-| free parameters       | 3                      | **2** |
-| largest $|$parameter correlation$|$ | 0.88 ($K_a$–$\Delta H$) | **0.62** (area–$\Delta H$) |
-| RMS / µJ              | 5.9                    | 7.3 |
+| binding $K$           | $K_a=(2.5\pm0.8)\times10^{5}$ M⁻¹ | $K=4$ M⁻¹ (fit) |
+| capacity              | $n=0.38\pm0.03$        | area $\approx 7\times10^{3}$ Å² (fit) — 21× the physical 338 Å² |
+| $\Delta H$ / kJ mol⁻¹ | $-47\pm5$         | $-38$ |
+| largest $|$parameter correlation$|$ | 0.88 ($K_a$–$\Delta H$) | **0.93** ($K$–area) |
+| RMS / µJ              | 5.9                    | 6.6 |
 
 ---
 

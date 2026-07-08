@@ -33,13 +33,14 @@ sigma0 < 0, the dipole still binds phytate, and the adsorbed z=-7 anion pushes
 sigma_eff (hence zeta) further negative -- the measured trend.
 
 One primary parameter, K (intrinsic Langmuir constant); Gamma_max is pinned by a
-geometric close-packing prior 1/(11 A)^2. K reflects the peptide/PA ionisation,
-which is set by pH and varies little with salt, so it is fit PER pH to each
-zeta-vs-[PA] series -- not globally -- and then held fixed across salt (validated
-against the zeta-vs-[NaCl] series) and *transferred* to ITC (fit only area + dH) and
-NMR (predict f_bound). A global K would force one chemistry across pH 4/6/10, which
-is wrong; the pH-dependent electrostatics (psi_beta dipole, sigma0 monopole) come
-from the MC, and K(pH) adds only the pH-specific contact chemistry.
+geometric close-packing prior 1/(11 A)^2. K reflects the peptide/PA ionisation, set by
+pH and nearly salt-independent, so it is fit PER pH to each zeta-vs-[PA] series (not
+globally, which would force one chemistry across pH 4/6/10) and held fixed across salt.
+The CR-PB then has two uses: (1) computing the zeta-potential / overcharge from the MC,
+and (2) providing an isotherm to FIT the ITC thermogram (K, area, dH free -- see
+fit_itc). It is NOT used for NMR, which is read from the MC PMF directly (see nmr_f and
+the Scope note below). The pH-dependent electrostatics (psi_beta dipole, sigma0
+monopole) come from the MC; K adds only the pH-specific contact chemistry.
 
 Note what K is NOT: it is not the MC Henry constant K_H = int(e^{-w}-1)dr. That K_H
 packs the *full* PMF -- electrostatics + excluded volume + contact -- into one
@@ -276,13 +277,15 @@ def eps_degeneracy(pH: float = 4.0, eps_grid=(0.0, 1.0, 2.0, 3.0, 4.0)):
 
 
 # --- probe 2: ITC ----------------------------------------------------------------
-def fit_itc(K: float, eps_ne: float = EPS_NE, pH: float = 4.0, ionic: float = I_ITC):
-    """Transfer (K, eps_ne) to the pH-4 thermogram; fit only area + dH.
+def fit_itc(pH: float = 4.0, ionic: float = I_ITC, eps_ne: float = EPS_NE):
+    """Fit the CR-PB isotherm to the pH-4 thermogram with K, area and dH ALL free.
 
-    Returns (area, dH, rms, corr) with corr the area-dH fit correlation. The CR-PB
-    binding is fixed from the zeta-fitted K, so ITC leaves only these two parameters;
-    their low correlation is what makes the fit more constrained than the three-parameter
-    one-site model.
+    A three-parameter fit (like the one-site model) that lets the thermogram choose the
+    affinity and capacity. It fits well -- but the returned ``area`` is the diagnostic:
+    ~15-20x the physical grafting density (AREA_OLEOSIN), and K-area are strongly
+    anti-correlated, so a good fit here is not evidence for monolayer binding (the heat
+    is cross-linking; see the write-up). Returns (K, area, dH, rms, corr) with corr the
+    K-area fit correlation.
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "itc"))
     import itc_data  # noqa: E402
@@ -290,27 +293,28 @@ def fit_itc(K: float, eps_ne: float = EPS_NE, pH: float = 4.0, ionic: float = I_
 
     titr = itc_data.load(pH)
     grid = np.logspace(-9, -2, 24)
-    cov = np.array([crpb_state(pH, ionic, c, K, eps_ne).gamma for c in grid])
 
-    def model(_x, area, dH):
+    def model(_x, logK, area, dH):
+        cov = np.array([crpb_state(pH, ionic, c, 10**logK, eps_ne).gamma for c in grid])
         return itc_fit._heat_uJ(titr, itc_fit._gvdw_bound(titr, area, grid, cov), dH)
 
     popt, pcov = curve_fit(
         model,
         titr.mole_ratio,
         titr.heat_uJ,
-        p0=[3000.0, -40.0],
-        bounds=([50, -1e4], [1e5, 0]),
-        maxfev=20000,
+        p0=[1.8, 5000.0, -35.0],
+        bounds=([-3, 50, -1e4], [8, 1e5, 0]),
+        maxfev=40000,
     )
     rms = float(np.sqrt(np.mean((titr.heat_uJ - model(titr.mole_ratio, *popt)) ** 2)))
-    corr = float(pcov[0, 1] / np.sqrt(pcov[0, 0] * pcov[1, 1]))
-    return (*popt, rms, corr)
+    corr = float(itc_fit.corr_from_cov(pcov)[0, 1])  # logK-area correlation
+    return (10 ** popt[0], popt[1], popt[2], rms, corr)
 
 
-def plot_itc(K: float, eps_ne: float, path: Path) -> None:
-    """pH-4 ITC thermogram: data (replicate mean +/- SD) with the CR-PB and one-site
-    models, for the CR-PB-vs-one-site comparison figure."""
+def plot_itc(eps_ne: float, path: Path) -> None:
+    """pH-4 ITC thermogram: data (replicate mean +/- SD) with the free-K/area CR-PB fit
+    and the one-site model. Both fit the curve well; the point of the write-up is that
+    the CR-PB fit's area is unphysical (a good fit is not a good model)."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -329,8 +333,8 @@ def plot_itc(K: float, eps_ne: float, path: Path) -> None:
 
     titr = itc_data.load(4.0)
     grid = np.logspace(-9, -2, 24)
+    K, area, dH, _, _ = fit_itc(eps_ne=eps_ne)
     cov = np.array([crpb_state(4.0, I_ITC, c, K, eps_ne).gamma for c in grid])
-    area, dH, _, _ = fit_itc(K, eps_ne)
     crpb = itc_fit._heat_uJ(titr, itc_fit._gvdw_bound(titr, area, grid, cov), dH)
     Ka, dH1, n1, _ = itc_fit.fit_onesite(titr)
     onesite = itc_fit.onesite_heat(titr, Ka, dH1, n1)
@@ -536,34 +540,23 @@ if __name__ == "__main__":
         print(f"  {pH:>4g} {f_sim:>8.2%} {f_rq:>8.2%} {ratio:>7}")
     print("  (K_H read from the MC PMF at 0.15 M -> parameter-free; the CR-PB is not used here)")
 
-    print("\nprobe 3 -- ITC (pH 4) at the PHYSICAL grafting density:")
-    area, dH, rms, _ = fit_itc(K_by_pH[4.0], eps_ne)  # also puts ../itc on sys.path
-    import itc_data as _id  # noqa: E402
-    import itc_fit as _if  # noqa: E402
-    from scipy.optimize import curve_fit as _cf  # noqa: E402
-
+    print("\nprobe 3 -- ITC (pH 4): the CR-PB isotherm fits well, but the area is unphysical")
+    K_itc, area, dH, rms, corr = fit_itc()  # K, area, dH all free
     print(
-        f"  free-area fit : area={area:.0f} A^2 = {area / AREA_OLEOSIN:.0f}x the physical "
-        f"grafting area ({AREA_OLEOSIN:.0f} A^2)  dH={dH:.0f}  RMS={rms:.1f} uJ"
+        f"  free fit (K,area,dH): K={K_itc:.0f}/M  area={area:.0f} A^2  dH={dH:.0f} kJ/mol  "
+        f"RMS={rms:.1f} uJ  K-area corr={corr:+.2f}"
     )
-    # pin the area to the real grafting density; fit only dH
-    t = _id.load(4.0)
-    grid = np.logspace(-9, -2, 24)
-    cov = np.array([crpb_state(4.0, I_ITC, c, K_by_pH[4.0], eps_ne).gamma for c in grid])
-
-    mdl = lambda x, dH: _if._heat_uJ(t, _if._gvdw_bound(t, AREA_OLEOSIN, grid, cov), dH)  # noqa: E731
-    p, _ = _cf(mdl, t.mole_ratio, t.heat_uJ, p0=[-35], bounds=([-3000], [0]), maxfev=20000)
-    rms_phys = float(np.sqrt(np.mean((t.heat_uJ - mdl(t.mole_ratio, *p)) ** 2)))
-    bound = AREA_OLEOSIN * crpb_state(4.0, I_ITC, 40e-6, K_by_pH[4.0], eps_ne).gamma
     print(
-        f"  physical area : dH={p[0]:.0f}  RMS={rms_phys:.1f} uJ  bound~{bound:.2f} PA/oleosin "
-        "(overcharge-capped)"
+        f"  -> a GOOD fit, but area = {area / AREA_OLEOSIN:.0f}x the physical grafting density "
+        f"({AREA_OLEOSIN:.0f} A^2/oleosin, MC = measured 1 umol/g);"
     )
-    print("  -> surface adsorption is overcharge-limited (~0.03 PA/oleosin); the ITC heat needs")
-    print("     ~10x more -> inter-droplet cross-linking/aggregation, not monolayer binding")
+    print(
+        "     the heat is dominated by inter-droplet cross-linking (the multiphasic shoulder"
+        " the manuscript reports), not monolayer binding -- a good fit is not a good model"
+    )
 
     figure = Path(__file__).parent / "fig_crpb.png"
     plot_crpb(K_by_pH, eps_ne, figure)
     itc_fig = Path(__file__).resolve().parent.parent / "itc" / "fig_itc_crpb.png"
-    plot_itc(K_by_pH[4.0], eps_ne, itc_fig)
+    plot_itc(eps_ne, itc_fig)
     print(f"\nsaved {figure.name}, {itc_fig.name}")
