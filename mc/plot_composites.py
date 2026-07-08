@@ -61,6 +61,8 @@ def plot_composite(ionic: float, path: Path) -> None:
             xp = e.NaCl_mM.to_numpy()
             mean = float(np.interp(nacl, xp, e.mean_mV.to_numpy()))
             sd = float(np.interp(nacl, xp, e.sd_mV.to_numpy()))
+            # Measured zeta has no intrinsic r; the +4 A offset only separates it from the
+            # simulated marker. Read this point by height (zeta), not by its x-position.
             axC.errorbar(zc.r_shear + 4, mean, yerr=sd, fmt="s", color=c, capsize=3, zorder=5)
 
         q = _sel(win, ionic, pH)

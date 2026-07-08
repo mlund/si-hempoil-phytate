@@ -43,7 +43,7 @@ phytate can overcharge the surface at pH 4. Figure 10 collects the low-salt
 simulation output — the potential of mean force, the phytate charge, the electric
 potential, and the rotational mobility, by pH.
 
-![Figure 10. Low-salt (5 mM) simulation composite by pH: (A) potential of mean force $w(r)$, (B) relative rotational mobility $D(r)/D_0$, (C) electric potential with simulated (open) and measured (filled) $\zeta$, (D) phytate charge, versus distance $r$ from the grafted wall.](../mc/composite_I0.005.png)
+![Figure 10. Low-salt (5 mM) simulation composite by pH: (A) potential of mean force $w(r)$, (B) relative rotational mobility $D(r)/D_0$, (C) electric potential with simulated $\zeta$ (open marker, at the shear plane — the outermost $r$ where the peptide fixed charge exceeds 2% of its peak) and measured $\zeta$ (filled marker, drawn at a fixed offset beside it; its $r$ is arbitrary, only the height is measured), (D) phytate charge, versus distance $r$ from the grafted wall.](../mc/composite_I0.005.png)
 
 The ionizable oleosin termini raise the local electric potential at the brush
 periphery above the surface average: the potential reaches $+52$ mV at the pH-4
@@ -96,9 +96,10 @@ fast-exchange model. The simulated and required fractions agree at every pH (Tab
 so the free-energy profile accounts quantitatively for the NMR magnitude at the
 measured salt.
 
-Table 1. Bound fraction from the MC PMF at 0.15 M, 7.6 mM PA ($K_H$ the surface partition
-length; $f_\text{req}$ the fraction the two-site model requires, using the fully-bound
-rate $\Delta R_\text{bound}=3\times10^{4}$ s⁻¹).
+Table 1. Bound fraction from the MC PMF at 0.15 M, 7.6 mM PA and 50% OB
+($\phi_\text{OB}=0.5$, $d_{43}=3$ µm; $K_H$ the surface partition length; $f_\text{req}$
+the fraction the two-site model requires, using the fully-bound rate
+$\Delta R_\text{bound}=3\times10^{4}$ s⁻¹).
 
 | pH | $K_H$ / Å | $f_\text{bound}$ (sim) / % | $f_\text{req}$ / % |
 |----|-----------|----------------------------|--------------------|
@@ -409,7 +410,9 @@ singularity. Because $R_c$ depends on the coverage, $\alpha(\Gamma)$
 and $\theta$ are solved together by fixed-point iteration. The bound fraction is then
 $f_\text{bound}=\Gamma a/n_B$, where $a=6\phi_\text{OB}/d_{43}$ is the oil-body specific
 surface area ($\phi_\text{OB}$ the droplet volume fraction, $d_{43}$ the reported
-volume-weighted mean diameter); it reduces to $a K_H$ only as $\theta\to0$.
+volume-weighted mean diameter); it reduces to $a K_H$ only as $\theta\to0$. The NMR
+sample sets $\phi_\text{OB}=0.5$ (50% OB) and $d_{43}=3$ µm, so more or smaller droplets
+(larger $a$) would raise $f_\text{bound}$ proportionally.
 In the fast-exchange limit, the observed slow-motion contrast is the population-weighted
 average of the free and bound states,
 
@@ -423,6 +426,14 @@ The bound fraction required by the NMR data is therefore
 $$f_\text{req}
 =\frac{\Delta R_{1\rho}^{\text{obs}}-\Delta R_\text{free}}
 {\Delta R_\text{bound}-\Delta R_\text{free}}.$$
+
+Here $\Delta R_{1\rho}^{\text{obs}}$ and $\Delta R_\text{free}$ are both measured — the
+OB-PA sample and the free-phytate (PA$_\text{aq}$) control of Figure 9G — whereas
+$\Delta R_\text{bound}$, the rigid-tumbling limit of a fully associated phytate, is not
+measured; we take $\Delta R_\text{bound}=3\times10^{4}$ s⁻¹. Since
+$\Delta R_\text{bound}\gg\Delta R_\text{free}$, $f_\text{req}$ scales roughly inversely
+with this assumed limit, so its absolute level is only as firm as $\Delta R_\text{bound}$
+— but the pH ordering and the agreement with $f_\text{bound}$ do not depend on it.
 
 The simulated $f_\text{bound}$ enters this relation with no parameter fitted to the NMR
 data, and matches $f_\text{req}$ at every pH (Table 1). Because $K_H$ is read at the
