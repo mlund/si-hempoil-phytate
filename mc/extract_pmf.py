@@ -18,8 +18,11 @@ import math
 import re
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
+import matplotlib
+
+matplotlib.use("Agg")  # non-interactive: save figures, never open a window
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
 
 RUNS_DIR = Path(__file__).parent / "runs"
 
@@ -98,8 +101,8 @@ def main() -> None:
     parser.add_argument("-o", "--output", default="pmf.png", help="output image path")
     parser.add_argument(
         "--csv",
-        default="all_pmfs.csv",
-        help="tidy long-format CSV of the referenced PMFs (default: all_pmfs.csv)",
+        default="pmf_profiles.csv",
+        help="tidy long-format CSV of the referenced PMFs (default: pmf_profiles.csv)",
     )
     parser.add_argument(
         "-w",
@@ -190,8 +193,6 @@ def main() -> None:
         fmt=["%g", "%g", "%.4f", "%.6f", "%.6f"],
     )
     print(f"Saved {args.csv} ({len(table)} rows)")
-
-    plt.show()
 
 
 if __name__ == "__main__":

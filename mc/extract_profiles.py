@@ -5,7 +5,7 @@ Each umbrella window's <run>/umbrella_states/window*_output.yaml holds an
 `analysis` block with the Multipole (mean charge, once per selection) and
 PolymerShape analyses. The window's position is the mean phytate (INO) z from its
 AtomPosition collective variable, converted to r = z + Lz/2 (distance from the
-decorated wall at z = -Lz/2; see the plot_pmf.py geometry).
+decorated wall at z = -Lz/2; see the extract_pmf.py geometry).
 
 The ElectricPotentialProfile analyses (potential_all.csv, potential_peptide.csv)
 are written per window over the full slit; they are averaged over all windows.
@@ -20,12 +20,14 @@ the outer edge of the fixed brush charge (largest r where |sigma_peptide| exceed
 a small fraction of its peak). Magnitude is shear-plane dependent; the sign and
 pH-trend are the meaningful output.
 
-Writes five tidy CSVs for pandas.read_csv:
-  charge.csv          long format: pH, ionic_strength, r, selection, charge, charge_error
-  polymer_shape.csv   wide format: pH, ionic_strength, r, <shape descriptors...>
-  potential.csv       wide format: pH, ionic_strength, r, potential_all_mV, potential_peptide_mV
-  rotational_msd.csv  wide format: pH, ionic_strength, r, msd_rot
-  zeta.csv            wide format: pH, ionic_strength, r_shear, zeta_mV
+Writes three tidy CSVs for pandas.read_csv. The three per-window observables (phytate
+and peptide charge, rotational MSD, and the gyration-tensor shape) all live on the same
+window-centre r-grid, so they are merged into one wide table:
+  window_profiles.csv    pH, ionic_strength, r, q_ino, q_ino_err, q_peptide,
+                         q_peptide_err, msd_rot, <shape descriptors...>
+  potential_profiles.csv pH, ionic_strength, r, potential_all_mV, potential_peptide_mV,
+                         sigma_peptide_e_A2   (full-slit profile, its own r-grid)
+  simulated_zeta.csv     pH, ionic_strength, r_shear, zeta_mV   (one row per condition)
 """
 
 import argparse
@@ -147,26 +149,36 @@ def shear_zeta(r, sigma_peptide, potential_all, half_lz, threshold=0.02):
     return r_shear, float(np.interp(r_shear, r, potential_all))
 
 
+# Faunus charge-selection labels -> the window_profiles column stems they map to.
+_CHARGE_COLS = {"atomtype INO": "q_ino", "molecule peptide": "q_peptide"}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--charge", default="charge.csv", help="output charge CSV")
-    parser.add_argument("--shape", default="polymer_shape.csv", help="output shape CSV")
-    parser.add_argument("--potential", default="potential.csv", help="output potential CSV")
-    parser.add_argument("--msd", default="rotational_msd.csv", help="output rotational-MSD CSV")
-    parser.add_argument("--zeta", default="zeta.csv", help="output shear-plane zeta CSV")
+    parser.add_argument("--window", default="window_profiles.csv", help="output window-profile CSV")
+    parser.add_argument(
+        "--potential", default="potential_profiles.csv", help="output potential CSV"
+    )
+    parser.add_argument("--zeta", default="simulated_zeta.csv", help="output shear-plane zeta CSV")
+    parser.add_argument(
+        "--max-ionic-strength",
+        type=float,
+        default=1.0,
+        help="skip runs above this I in mol/L (default: 1.0, drops the I1000 sentinels)",
+    )
     args = parser.parse_args()
 
-    charge_rows = []
-    shape_rows = []
+    window_rows = []
     shape_fields = None
     potential_rows = []
-    msd_rows = []
     zeta_rows = []
     for output_yaml in sorted(RUNS_DIR.glob("*/output.yaml")):
         run = output_yaml.parent
         name = run.name
         ph = ph_from_name(name)
         ionic = ionic_strength_from_name(name)
+        if ionic > args.max_ionic_strength:  # skip the I1000 sentinel (matches extract_pmf)
+            continue
         half_lz = load_yaml(output_yaml)["cell"][2] / 2  # Lz is the slit z-length
 
         # Potential profiles span the full slit; average each selection over windows.
@@ -182,39 +194,64 @@ def main() -> None:
         r_shear, zeta = shear_zeta(r_prof, sigma_peptide, pot_all, half_lz)
         zeta_rows.append([ph, ionic, r_shear, zeta])
 
+        # Per-window observables (charge, shape, rotational MSD) share the window-centre
+        # r-grid, so each window yields one merged row.
         windows = sorted(run.glob("umbrella_states/window*_output.yaml"), key=window_index)
         for win in windows:
             z, charges, shape, msd = parse_window(win)
             if z is None:
                 continue
             r = z + half_lz
-            msd_rows.append([ph, ionic, r, msd])
+            q = dict.fromkeys(_CHARGE_COLS.values(), "")
             for selection, charge, error in charges:
-                charge_rows.append([ph, ionic, r, selection, charge, error])
+                stem = _CHARGE_COLS.get(selection)
+                if stem is not None:
+                    q[stem], q[f"{stem}_err"] = charge, error
+            clean = {}
             if shape is not None:
                 # Sanitise field names (e.g. Re2/Rg2 -> Re2_Rg2) for tidy columns.
                 clean = {k.replace("/", "_"): v for k, v in shape.items()}
                 if shape_fields is None:
                     shape_fields = list(clean)
-                shape_rows.append([ph, ionic, r, *(clean.get(f, "") for f in shape_fields)])
+            # Keep the shape dict; expand it against the final shape_fields at write time so
+            # rows stay aligned even if a shapeless window is seen before the first shaped one.
+            window_rows.append(
+                [
+                    ph,
+                    ionic,
+                    r,
+                    q["q_ino"],
+                    q.get("q_ino_err", ""),
+                    q["q_peptide"],
+                    q.get("q_peptide_err", ""),
+                    msd,
+                    clean,
+                ]
+            )
 
-    charge_rows.sort(key=lambda row: (row[0], row[1], row[2]))
-    shape_rows.sort(key=lambda row: (row[0], row[1], row[2]))
+    window_rows.sort(key=lambda row: (row[0], row[1], row[2]))
     potential_rows.sort(key=lambda row: (row[0], row[1], row[2]))
-    msd_rows.sort(key=lambda row: (row[0], row[1], row[2]))
     zeta_rows.sort(key=lambda row: (row[0], row[1]))
 
-    with open(args.charge, "w", newline="") as f:
+    shape_fields = shape_fields or []
+    with open(args.window, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["pH", "ionic_strength", "r", "selection", "charge", "charge_error"])
-        w.writerows(charge_rows)
-    print(f"Saved {args.charge} ({len(charge_rows)} rows)")
-
-    with open(args.shape, "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["pH", "ionic_strength", "r", *shape_fields])
-        w.writerows(shape_rows)
-    print(f"Saved {args.shape} ({len(shape_rows)} rows)")
+        w.writerow(
+            [
+                "pH",
+                "ionic_strength",
+                "r",
+                "q_ino",
+                "q_ino_err",
+                "q_peptide",
+                "q_peptide_err",
+                "msd_rot",
+                *shape_fields,
+            ]
+        )
+        for *base, clean in window_rows:
+            w.writerow([*base, *(clean.get(fld, "") for fld in shape_fields)])
+    print(f"Saved {args.window} ({len(window_rows)} rows)")
 
     with open(args.potential, "w", newline="") as f:
         w = csv.writer(f)
@@ -230,12 +267,6 @@ def main() -> None:
         )
         w.writerows(potential_rows)
     print(f"Saved {args.potential} ({len(potential_rows)} rows)")
-
-    with open(args.msd, "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["pH", "ionic_strength", "r", "msd_rot"])
-        w.writerows(msd_rows)
-    print(f"Saved {args.msd} ({len(msd_rows)} rows)")
 
     with open(args.zeta, "w", newline="") as f:
         w = csv.writer(f)

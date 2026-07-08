@@ -4,7 +4,7 @@ for one ionic strength -- the salt-resolved companion to ``composite_lowsalt.png
 
 Reproduces the four-panel low-salt composite from ``analysis.ipynb`` for any simulated
 ionic strength, so the SI can show how the well and the double layer screen with salt.
-Run: ``uv run python plot_composite.py`` (renders I = 0.005, 0.03, 0.15 M).
+Run: ``uv run python plot_composites.py`` (renders I = 0.005, 0.03, 0.15 M).
 """
 
 from __future__ import annotations
@@ -30,13 +30,12 @@ def _sel(df: pd.DataFrame, ionic: float, pH: float) -> pd.DataFrame:
 
 def plot_composite(ionic: float, path: Path) -> None:
     """Four-panel composite at ionic strength ``ionic`` (M)."""
-    pmf = pd.read_csv(HERE / "all_pmfs.csv")
-    msd = pd.read_csv(HERE / "rotational_msd.csv")
-    pot = pd.read_csv(HERE / "potential.csv")
-    chg = pd.read_csv(HERE / "charge.csv")
-    zeta = pd.read_csv(HERE / "zeta.csv")
+    pmf = pd.read_csv(HERE / "pmf_profiles.csv")
+    win = pd.read_csv(HERE / "window_profiles.csv")  # phytate charge + rotational mobility
+    pot = pd.read_csv(HERE / "potential_profiles.csv")
+    zeta = pd.read_csv(HERE / "simulated_zeta.csv")
     # Measured bare-OB zeta vs added salt (PA = 0), interpolated to this ionic strength.
-    exp = pd.read_csv(HERE.parent / "zeta" / "zeta_experimental.csv")
+    exp = pd.read_csv(HERE.parent / "zeta" / "measured_zeta.csv")
     exp = exp[(exp.series == "NaCl") & (exp.PA_mM == 0)]
     nacl = max(0.0, (ionic - 0.003) * 1000)  # ionic ~ 3 mM buffer + added NaCl
 
@@ -48,7 +47,7 @@ def plot_composite(ionic: float, path: Path) -> None:
         axA.fill_between(p.r, p.pmf_kT - p.stderr_kT, p.pmf_kT + p.stderr_kT, color=c, alpha=0.15)
         axA.plot(p.r, p.pmf_kT, color=c, label=f"pH {pH:g}")
 
-        m = _sel(msd, ionic, pH)
+        m = _sel(win, ionic, pH)
         axB.plot(m.r, m.msd_rot / m.msd_rot.iloc[-3:].mean(), color=c)
 
         v = _sel(pot, ionic, pH)
@@ -64,8 +63,8 @@ def plot_composite(ionic: float, path: Path) -> None:
             sd = float(np.interp(nacl, xp, e.sd_mV.to_numpy()))
             axC.errorbar(zc.r_shear + 4, mean, yerr=sd, fmt="s", color=c, capsize=3, zorder=5)
 
-        q = _sel(chg[chg.selection == "atomtype INO"], ionic, pH)
-        axD.plot(q.r, q.charge, color=c, marker="o", ms=3, lw=1)
+        q = _sel(win, ionic, pH)
+        axD.plot(q.r, q.q_ino, color=c, marker="o", ms=3, lw=1)
 
     axA.axhline(0, color="gray", ls="--", lw=0.5)
     axA.set_ylabel(r"PMF ($k_\mathrm{B}T$)")

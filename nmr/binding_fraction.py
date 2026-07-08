@@ -34,14 +34,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# Reuse the fitted-PMF machinery so we never depend on a possibly-stale all_pmfs.csv.
-# plot_pmf lives with the Monte-Carlo scripts in ../mc; the shared gvdW lateral term
-# (coverage-based Forsman correction) lives with the zeta model in ../zeta.
+# Reuse the fitted-PMF machinery so we never depend on a possibly-stale pmf_profiles.csv.
+# extract_pmf lives with the Monte-Carlo scripts in ../mc; the shared constants and the
+# Forsman lateral term live in the zeta shared module in ../zeta.
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT / "mc"))
 sys.path.insert(0, str(_ROOT / "zeta"))
-import zeta_gvdw as gv  # noqa: E402
-from plot_pmf import (  # noqa: E402
+import mc_shared as gv  # noqa: E402
+from extract_pmf import (  # noqa: E402
     RUNS_DIR,
     box_length_z,
     debye_length,
@@ -70,9 +70,8 @@ def fitted_pmf(run_dir: Path, window: float = 10.0):
 
 def load_profiles(ionic: float):
     """Collect {pH: dict of aligned r-profiles} for one ionic strength."""
-    shape = pd.read_csv(MC / "polymer_shape.csv")
-    msd = pd.read_csv(MC / "rotational_msd.csv")
-    shape["Swall"] = (3 * shape.Szz / (shape.Sxx + shape.Syy + shape.Szz) - 1) / 2
+    win = pd.read_csv(MC / "window_profiles.csv")  # shape + rotational MSD share this grid
+    win["Swall"] = (3 * win.Szz / (win.Sxx + win.Syy + win.Szz) - 1) / 2
 
     out = {}
     for run in sorted(RUNS_DIR.glob("*/pmf.csv")):
@@ -81,16 +80,15 @@ def load_profiles(ionic: float):
             continue
         pH = ph_from_name(run.name)
         r, w = fitted_pmf(run)
-        s = shape[(shape.pH == pH) & (shape.ionic_strength == ionic)].sort_values("r")
-        m = msd[(msd.pH == pH) & (msd.ionic_strength == ionic)].sort_values("r")
-        if s.empty or m.empty:
+        wp = win[(win.pH == pH) & (win.ionic_strength == ionic)].sort_values("r")
+        if wp.empty:
             continue
-        dd0 = m.msd_rot / m.msd_rot.iloc[-3:].mean()
+        dd0 = wp.msd_rot / wp.msd_rot.iloc[-3:].mean()
         out[pH] = {
             "r": r,
             "w": w,
-            "Swall": np.interp(r, s.r.values, s.Swall.values),
-            "dd0": np.clip(np.interp(r, m.r.values, dd0.values), 1e-3, None),
+            "Swall": np.interp(r, wp.r.values, wp.Swall.values),
+            "dd0": np.clip(np.interp(r, wp.r.values, dd0.values), 1e-3, None),
         }
     return out
 
@@ -115,7 +113,7 @@ def f_bound_henry(a: float, K_H: float) -> float:
     return aK / (1.0 + aK)
 
 
-def gvdw_coverage(K_H: float, n_B: float, d2: float, z: float, ionic: float) -> float:
+def coverage_isotherm(K_H: float, n_B: float, d2: float, z: float, ionic: float) -> float:
     """Adsorbed-layer coverage theta = Gamma*d^2 from Nordholm's gvdW 2D isotherm.
 
     Solve the implicit hard-disk (Eq 7.43) / Lennard-Jones (Eq 7.54) isotherm
@@ -142,14 +140,14 @@ def gvdw_coverage(K_H: float, n_B: float, d2: float, z: float, ionic: float) -> 
     return theta
 
 
-def f_bound_gvdw(a: float, K_H: float, pa_mM: float, d_A: float, z: float, ionic: float) -> float:
+def bound_fraction(a: float, K_H: float, pa_mM: float, d_A: float, z: float, ionic: float) -> float:
     """Bound fraction from the gvdW isotherm: crowding + lateral interactions cap it.
 
     f_bound = Gamma a / n_B = (theta/d^2) a / n_B; reduces to Henry (a K_H) as theta->0.
     """
     n_B = pa_mM * 1e-3 * 6.02214076e23 / 1e27  # mM -> 1/A^3
     d2 = d_A**2
-    theta = gvdw_coverage(K_H, n_B, d2, z, ionic)
+    theta = coverage_isotherm(K_H, n_B, d2, z, ionic)
     Gamma = theta / d2
     return Gamma * a / n_B
 
@@ -177,10 +175,10 @@ def f_bound_langmuir(a: float, K_H: float, pa_mM: float, site_mM: float, n: floa
 
 
 # Measured 31P DeltaR = R1rho - R1 (s^-1) at OB 50%: (free PA_aq, OB-PA). Figure 9G.
-NMR_DELTA_R = {4.0: (162.0, 559.0), 6.0: (130.0, 430.0), 10.0: (5.1, 52.0)}
+NMR_DELTA_R = {4.0: (162.0, 559.0), 6.0: (128.0, 430.0), 10.0: (5.1, 52.0)}
 
-# Bulk phytate valence z(pH) at I=0.15 M (charge.csv, INO selection, large-r mean).
-PHYTATE_Z = {4.0: 5.94, 6.0: 7.08, 7.0: 8.67, 10.0: 10.54}
+# Bulk phytate valence z(pH) at I=0.15 M (window_profiles.csv, q_ino, large-r mean).
+PHYTATE_Z = {4.0: 5.94, 6.0: 7.08, 10.0: 10.54}
 
 
 def site_density_for_f(a: float, K_H: float, f_target: float, pa_mM: float, n: float) -> float:
@@ -204,10 +202,11 @@ def site_density_for_f(a: float, K_H: float, f_target: float, pa_mM: float, n: f
 def match_nmr(intensive, pa_mM, n, ionic=0.15, phi=0.5, d43_um=3.0, d_core=10.6):
     """Does the gvdW isotherm reproduce the NMR pH series — in particular pH4 > pH6?
 
-    f_bound now comes from the charge/salt-dependent gvdW 2D isotherm (Eq 7.44/7.54):
-    K_H from the PMF, hard-core d from PyGRPY, lateral a2 the coverage-based Forsman
-    correction shared with the zeta and ITC models. Compared against the NMR-required
-    f_bound from two-site exchange, f_req = (DeltaR_obs - DeltaR_free)/(DeltaR_bound - DeltaR_free).
+    f_bound comes from the charge/salt-dependent gvdW 2D isotherm (Eq 7.44/7.54):
+    K_H from the PMF, hard-core d from PyGRPY, and the lateral coefficient a2 the
+    coverage-based Forsman correction -- a parameter-free like-charge lateral cap.
+    Compared against the NMR-required f_bound from two-site exchange,
+    f_req = (DeltaR_obs - DeltaR_free)/(DeltaR_bound - DeltaR_free).
     """
     a = specific_area(phi, d43_um)
     print(
@@ -220,16 +219,16 @@ def match_nmr(intensive, pa_mM, n, ionic=0.15, phi=0.5, d43_um=3.0, d_core=10.6)
     )
     print("-" * 78)
     fg = {}
-    for pH in (4.0, 6.0, 7.0):
+    for pH in (4.0, 6.0):
         if pH not in intensive or intensive[pH][0] <= 0:
             continue
         K_H = intensive[pH][0]
         z = PHYTATE_Z[pH]
         f_henry = f_bound_henry(a, K_H)
-        f_gvdw = f_bound_gvdw(a, K_H, pa_mM, d_core, z, ionic)
+        f_gvdw = bound_fraction(a, K_H, pa_mM, d_core, z, ionic)
         fg[pH] = f_gvdw
         n_B = pa_mM * 1e-3 * 6.02214076e23 / 1e27
-        theta = gvdw_coverage(K_H, n_B, d_core**2, z, ionic)  # for display of converged alpha
+        theta = coverage_isotherm(K_H, n_B, d_core**2, z, ionic)  # for display of converged alpha
         alpha = gv.lateral_alpha(ionic, z, theta / d_core**2)
         row = f"{pH:>4} {z:>5.1f} {K_H:>5.0f} {alpha:>9.2f} {f_henry:>8.2%} {f_gvdw:>7.2%} | "
         if pH in NMR_DELTA_R:
@@ -289,7 +288,7 @@ def main() -> None:
     print("# native cream d43 ~ a few um at prep pH; sweep to show sensitivity\n")
     scenarios = [("10% OB", 0.10), ("50% OB", 0.50)]
     d43s = [1.0, 3.0, 11.0]  # um
-    for pH in [x for x in (4.0, 6.0, 7.0) if x in intensive and intensive[x][0] > 0]:
+    for pH in [x for x in (4.0, 6.0) if x in intensive and intensive[x][0] > 0]:
         K_H, S_b, tau_b = intensive[pH]
         print(
             f"pH {pH:g}:  K_H = {K_H:.0f} A,  S_bound = {S_b:+.4f},  tau/tau0|local = {tau_b:.2f}"

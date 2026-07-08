@@ -89,34 +89,39 @@ not adsorption.
 
 *NMR.* The NMR bound fraction follows **directly from the simulated free energy**, with
 no fitted parameter. The potential of mean force gives the surface partition length
-$K_H=\int(e^{-w/k_BT}-1)\,dr$ at 0.15 M, and the oil-body specific surface area
-$a=6\phi_\text{OB}/d_{43}$ ($\phi_\text{OB}$ the volume fraction, $d_{43}$ the
-volume-weighted mean droplet diameter) turns it into the bound fraction
-$f_\text{bound}=\Gamma a/n_B$ ($\Gamma$ the
-areal coverage, $n_B$ the bulk phytate density), which enters the two-site fast-exchange
-relation $\Delta R_\text{obs}=f_\text{bound}\Delta R_\text{bound}+(1-f_\text{bound})
-\Delta R_\text{free}$, with $\Delta R = R_{1\rho}-R_1$. Carried this way — the simulated
-thermodynamics taken straight to the observable — $f_\text{bound}$ matches the value the
-exchange requires at every pH (Table N). This is the most direct of the three links:
-no isotherm fit, no transfer across salt, just the free energy at the measured condition.
+$K_H=\int(e^{-w/k_BT}-1)\,dr$ at 0.15 M. The oil-body specific surface area
+$a=6\phi_\text{OB}/d_{43}$ ($\phi_\text{OB}$ the droplet volume fraction, $d_{43}$ the
+volume-weighted mean droplet diameter) and the adsorption isotherm (SI §S-5) then give
+the bound fraction $f_\text{bound}=\Gamma a/n_B$ ($\Gamma$ the areal coverage, $n_B$ the
+bulk phytate number density). In the fast-exchange limit the measured contrast
+$\Delta R_{1\rho}=R_{1\rho}-R_1$ ($R_{1\rho}$, $R_1$ the rotating-frame and longitudinal
+relaxation rates; Fig 9G) is the population-weighted average of that
+contrast over the free and fully-bound states, $\Delta R_{1\rho}=f_\text{bound}\,
+\Delta R_\text{bound}+(1-f_\text{bound})\,\Delta R_\text{free}$. Solving for
+$f_\text{bound}$ gives the fraction the exchange requires, and the simulated
+$f_\text{bound}$ matches it at every pH (Table N) — the most direct of the three links:
+no fitted isotherm, no transfer across salt, just the free energy at the measured
+condition.
 
 Table N. Bound fraction from the MC PMF at 0.15 M, 7.6 mM PA ($K_H$ the surface partition
-length, $f_\text{req}$ the fraction the two-site model requires).
+length; $f_\text{req}$ the fraction the two-site model requires, using the fully-bound
+rate $\Delta R_\text{bound}=3\times10^{4}$ s⁻¹).
 
 | pH | $K_H$ / Å | $f_\text{bound}$ (sim) / % | $f_\text{req}$ / % |
 |----|-----------|----------------------------|--------------------|
 | 4  | 925  | 1.30 | 1.33 |
-| 6  | 1209 | 1.05 | 1.00 |
+| 6  | 1209 | 1.05 | 1.01 |
 | 10 | 17   | 0.11 | 0.16 |
 
 The simulation also explains why a bound phytate still relaxes like a mobile species.
 Its rotational mobility relative to the free molecule, $D(r)/D_0$ (Figure X, panel B),
 is $0.5$–$0.7$ near the surface, so it reorients at roughly half its bulk rate but is
-not frozen. The raised $\Delta R$ at pH 4 and 6 then reflects slow reorientation as
+not frozen. The raised $\Delta R_{1\rho}$ at pH 4 and 6 then reflects slow reorientation as
 phytate co-tumbles with the micron-scale droplet, not rigid immobilization —
 consistent with the absent cross-polarization signal. A bare-hydrodynamic estimate
 supports a single free-tumbling reference $\Delta R_\text{free}$: free phytate tumbles
-near-isotropically with $\tau_r \approx 134$–$147$ ps and little variation across
+near-isotropically, with rotational correlation time $\tau_r \approx 134$–$147$ ps and
+little variation across
 protonation states (SI §S-5).
 
 *Calorimetry.* Both isotherms fit the pH-4 thermogram — the instrument's one-site
@@ -175,8 +180,8 @@ temperature-dependent dielectric permittivity at 298.15 K.
 **Peptide titration.** Four groups protonate through atom-type swap moves against an
 implicit proton bath ($a_{\text{H}^+}=10^{-\text{pH}}$): Glu (p$K_a$ 4.24), Lys
 (10.4), the N-terminus (8.0) and the C-terminus (3.67) (Grimsley et al., 2009). The
-mean chain charge runs from $\approx +1e$ at pH 4, through $\approx -0.1e$ at pH 7, to
-$\approx -1.3e$ at pH 10 — i.e. the brush passes through its isoelectric region near
+mean chain charge runs from $\approx +1e$ at pH 4 to $\approx -1.3e$ at pH 10, i.e.
+the brush passes through its isoelectric region near
 pH 6, exactly where the *net*-charge picture fails but the local cationic patch does
 not (§3.3.4).
 
@@ -219,9 +224,8 @@ apart, strongly overlapping) spanning the grafted wall to the slit centre. A har
 drive (5.0 kJ mol⁻¹ Å⁻²) steers phytate into each window before the bias is removed
 for unbiased production; adjacent windows are stitched by the overlap ratio
 $\Delta F_{i\to i+1}=-k_BT\ln(f_i/f_{i+1})$, with $f_i$ the fraction of window-$i$
-samples falling in the $i/i{+}1$ overlap. PMFs were computed at pH 4, 6, 7 and 10 and
-$I=0.005$, 0.03 and 0.15 M (the paper analyses 4, 6, 10 against experiment; pH 7 is an
-additional simulated intermediate).
+samples falling in the $i/i{+}1$ overlap. PMFs were computed at pH 4, 6 and 10 and
+$I=0.005$, 0.03 and 0.15 M.
 
 **Position-resolved rotational mobility.** $D(r)/D_0$ is read from the Monte Carlo
 rotations themselves: the mean accepted squared angular step per attempted move,
@@ -357,13 +361,27 @@ partition length (a Henry constant with units of length),
 
 $$K_H=\int\big(e^{-w(r)/k_BT}-1\big)\,dr ,$$
 
-evaluated at $I=0.15$ M. The areal coverage $\Gamma$ then follows from the same
-isotherm used throughout: in the dilute (Henry) limit $\Gamma\to K_H\,n_B$ with $n_B$
-the bulk phytate number density, but at the measured 7.6 mM phytate the like-charge
-lateral repulsion between adsorbed molecules already caps it below that limit. The bound
-fraction is $f_\text{bound}=\Gamma a/n_B$, where $a=6\phi_\text{OB}/d_{43}$ is the
-oil-body specific surface area ($\phi_\text{OB}$ the droplet volume fraction, $d_{43}$
-the reported volume-weighted mean diameter); it reduces to $a K_H$ only as $\Gamma\to0$.
+evaluated at $I=0.15$ M. The areal coverage $\Gamma$ follows from a two-dimensional
+generalized-van-der-Waals isotherm. In the dilute (Henry) limit $\Gamma\to K_H\,n_B$
+($n_B$ the bulk phytate number density), but at the measured 7.6 mM phytate the adsorbed
+anions crowd and repel, so the coverage fraction $\theta=\Gamma d^2$ (phytate hard-disk
+diameter $d$) solves the implicit isotherm
+
+$$\theta=\phi_0\,(1-\theta)\,\exp\!\Big(\alpha\,\theta-\frac{\theta}{1-\theta}\Big),
+\qquad \phi_0=K_H\,n_B\,d^2 ,$$
+
+with $\phi_0$ the Henry-limit coverage and $\alpha<0$ the dimensionless lateral
+coefficient carrying the like-charge phytate–phytate repulsion. That repulsion is the
+screened Coulomb interaction between adsorbed multivalent anions, which diverges at
+contact in mean field. **Forsman's (2004) correlation correction** removes the
+divergence: below a correlation-hole radius $R_c$ (the nearest-neighbour spacing
+$\sim 1/\sqrt{\pi\Gamma}$, floored at the hard core $d$ and capped at $\sim$two Debye
+lengths) the pair repulsion is replaced by its tangent, so the layer packs without the
+singularity. Because $R_c$ depends on the coverage, $\alpha(\Gamma)$
+and $\theta$ are solved together by fixed-point iteration. The bound fraction is then
+$f_\text{bound}=\Gamma a/n_B$, where $a=6\phi_\text{OB}/d_{43}$ is the oil-body specific
+surface area ($\phi_\text{OB}$ the droplet volume fraction, $d_{43}$ the reported
+volume-weighted mean diameter); it reduces to $a K_H$ only as $\theta\to0$.
 This $f_\text{bound}$ enters the two-site fast-exchange relation of the main text
 (§3.3.4) with no adjustable parameter, and matches the fraction the exchange requires at
 every pH (main-text Table N). Because $K_H$ is read at the measured salt, nothing is
@@ -454,6 +472,8 @@ All simulation input files, modelling and analysis scripts are available at
 - De Stefano, C., Milea, D., & Sammartano, S. (2003). Speciation of phytate ion in
   aqueous solution: protonation constants in tetraethylammonium iodide and sodium
   chloride. *J. Chem. Eng. Data* **48**, 114–119. https://doi.org/10.1021/je020124m
+- Forsman, J. (2004). A simple correlation-corrected Poisson–Boltzmann theory.
+  *J. Phys. Chem. B* **108**, 9236–9245. https://doi.org/10.1021/jp049571u
 - Grahame, D. C. (1947). The electrical double layer and the theory of
   electrocapillarity. *Chem. Rev.* **41**, 441–501.
   https://doi.org/10.1021/cr60130a002

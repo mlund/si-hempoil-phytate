@@ -2,14 +2,22 @@
 
 Monte Carlo simulation and analysis of **phytate (IP6)** interacting with an
 **oleosin N-terminal peptide brush** grafted to an oil-body surface, plus a
-hydrodynamic estimate of free-phytate diffusion.
+hydrodynamic estimate of free-phytate diffusion. This is the reproduction repository
+for the simulation and theory results in the oil-body–phytate manuscript.
 
 The peptide is the N-terminal arm of *Cannabis sativa* oleosin, modeled as a
 coarse-grained brush on one wall of a slit. A titrating phytate molecule is pulled
 along the slit normal by umbrella sampling to obtain the potential of mean force
 (PMF), together with its charge regulation, shape, and the electric potential
 profile. The [Faunus](https://github.com/mlund/faunus) MC engine runs the
-simulations; the Python here sets up scans and analyzes the output.
+simulations; the Python here sets up the runs and analyzes the output.
+
+A **charge-regulated Poisson–Boltzmann** model (`zeta/charge_regulation.py`) carries
+the simulated PMF to finite concentration and to the measured ζ-potential: it
+reproduces the pH-4 ζ charge reversal (overcharging) at the cost of one intrinsic
+affinity per pH, and it also fits the ITC thermogram. The ³¹P NMR bound fraction is
+read directly from the simulated free energy (`nmr/binding_fraction.py`). Shared
+MC-grounded utilities live in `zeta/mc_shared.py`.
 
 ## Geometry conventions
 
@@ -22,112 +30,84 @@ Analysis works in **`r = z + Lz/2`**, the distance from the decorated wall
 (`r = 0` at the brush, `r → Lz/2` toward bulk). The phytate is sampled over
 `z ∈ [-Lz/2, 0]`, so its reaction coordinate spans `r ∈ [0, Lz/2]`.
 
+## Reproduce the paper results
+
+Uses [uv](https://docs.astral.sh/uv/) (Python ≥ 3.12). The small CSV layer is
+committed, so the figures and tables reproduce from a clean clone **without** the
+large raw MC output:
+
+```bash
+uv sync                      # create .venv from uv.lock
+
+uv run make_figures.py       # CSV layer -> all figures + tables (Table N, S-3a, S-6)
+uv run writeup/build.py      # embed the figures into the Word/ODF write-up
+```
+
+`make_figures.py` regenerates every paper figure (`zeta/fig_crpb.png`,
+`itc/fig_itc_crpb.png`, `mc/composite_I*.png`) and prints the tables to stdout.
+
+To rebuild the CSV layer itself from the raw Faunus output — needs `mc/runs/`, which
+is large and git-ignored (obtain it separately) — run Stage 1 first:
+
+```bash
+uv run extract_csvs.py       # mc/runs/ -> mc/{pmf,window,potential}_profiles.csv, simulated_zeta.csv
+```
+
 ## Layout
 
 ```
-mc/                     Faunus MC simulation + analysis
-  input.yaml            umbrella-sampling input (MiniJinja template: pH, salt, ...)
-  setup_scan.py         generate per-(pH, I) run dirs + SLURM scripts
-  plot_pmf.py           PMF plots, faceted by pH, with a screened-Coulomb tail fit
-  extract_data.py       per-window charge & polymer shape + averaged potential
-  peptide_density_z.py  peptide number density along z from an XTC trajectory
-  plot_composite.py     salt-resolved MC composites (PMF, potential, charge, mobility)
-  analysis.ipynb        merge the extracted CSVs and plot per condition
-  runs/                 simulation output (large files git-ignored)
-zeta/                   the MC-grounded adsorption models (shared by all three probes)
-  zeta_gvdw.py          gvdW isotherm; zeta-potential vs [PA]/[NaCl]
-  zeta_crpb.py          charge-regulated Poisson-Boltzmann model (reproduces the
-                        pH-4 zeta reversal; also fits the ITC via fit_itc)
-  parse_zeta.py         tidy the measured zeta workbook -> zeta_experimental.csv
-nmr/                    NMR binding bridge + free-phytate hydrodynamics
-  nmr_binding_bridge.py
-  rotational_diffusion.py (RDKit conformers + PyGRPY)
-itc/                    isothermal titration calorimetry fits
-  itc_fit.py            one-site (Wiseman) vs the MC-grounded gvdW isotherm
-latex/                  manuscript + methodology working notes
-writeup/                simulation support text for the experimental manuscript
-  sim_for_mauricio.md   Word/ODF draft (main text + SI) to merge into the OB-PA paper
-  build.py              `uv run writeup/build.py` -> .docx + .odt (pandoc)
-pyproject.toml          uv project (dependencies + ruff config)
+mc/                       Faunus MC simulation + extraction
+  input.yaml, state.yaml, phytate.xyz   simulation inputs
+  generate_runs.py        write per-(pH, salt) run dirs + SLURM scripts
+  extract_pmf.py          runs/ PMF -> pmf_profiles.csv (+ pmf.png), screened-Coulomb tail fit
+  extract_profiles.py     runs/ -> window_profiles, potential_profiles, simulated_zeta
+  plot_composites.py      composite figures (PMF, mobility, potential, charge) per salt
+  pmf_profiles.csv        PMF(r) per (pH, ionic)                             [committed]
+  window_profiles.csv     phytate/peptide charge, rotational mobility, shape vs r  [committed]
+  potential_profiles.csv  electric potential phi(r)                          [committed]
+  simulated_zeta.csv      shear-plane zeta per condition                     [committed]
+  runs/                   raw Faunus output (large, git-ignored)
+zeta/                     charge-regulated model + shared utilities
+  mc_shared.py            shared MC-grounded utilities (PMF, valence, Grahame, Debye)
+  charge_regulation.py    CR-PB model: zeta vs [PA]/[NaCl] (fig_crpb.png) + ITC fit
+  parse_zeta_workbook.py  tidy the measured-zeta workbook -> measured_zeta.csv
+  Zeta_potential_tidied.xlsx   measured-zeta workbook (source)
+  measured_zeta.csv       measured zeta (mean, SD, n)                        [committed]
+nmr/                      NMR bound fraction + free-phytate hydrodynamics
+  binding_fraction.py     simulated PMF -> NMR bound fraction (Table N)
+  rotational_diffusion.py RDKit conformers + PyGRPY -> free_phytate_diffusion.csv
+  free_phytate_diffusion.csv   free-phytate hydrodynamics                    [committed]
+itc/                      isothermal titration calorimetry
+  extract_thermograms.py  load NanoAnalyze .xls/.nitc exports
+  fit_thermogram.py       one-site (Wiseman) fit + shared titration engine
+  pH4/ pH6/ pH10/         raw ITC exports
+writeup/                  simulation-support text for the manuscript
+  sim_for_mauricio.md     Word/ODF draft (main text + SI)
+  build.py                sim_for_mauricio.md -> .docx + .odt (pandoc)
+extract_csvs.py           Stage 1: mc/runs/ -> the committed CSV layer
+make_figures.py           Stage 2: CSV layer -> all figures + tables
+pyproject.toml            uv project (dependencies + ruff config)
 ```
 
-Two **MC-grounded adsorption models** carry the simulated phytate PMF to finite
-concentration and to the measured ζ-potential. The **gvdW** model
-(`zeta/zeta_gvdw.py`) reads the Henry constant `K_H` and the Forsman-corrected
-lateral coefficient `a2` from the Monte Carlo, transferring the binding to the
-calorimetry (ITC), ζ-potential and ³¹P NMR rather than fitting it. The
-**charge-regulated Poisson–Boltzmann** model (`zeta/zeta_crpb.py`) instead lets
-phytate regulate the surface charge, so it reproduces the pH-4 ζ charge reversal
-(overcharging) that mean-field gvdW cannot, at the cost of one intrinsic affinity
-fit per pH. The theory writes up as simulation *support* for the experimental
-manuscript in `writeup/`.
+## Simulate (optional)
 
-## Setup
-
-Uses [uv](https://docs.astral.sh/uv/). Requires Python ≥ 3.12.
-
-```bash
-uv sync            # create .venv from uv.lock
-```
-
-Running the simulations additionally needs the `faunus` binary on `PATH`
-(installed separately from the analysis environment).
-
-## Workflow
-
-### 1. Simulate
-
-Generate and (optionally) submit a scan over pH and ionic strength:
+Running the simulations needs the `faunus` binary on `PATH` (installed separately
+from the analysis environment). Generate and (optionally) submit a scan over pH and
+ionic strength:
 
 ```bash
 cd mc
-uv run setup_scan.py            # write runs/pH{pH}_I{salt}/ with SLURM scripts
-uv run setup_scan.py --submit   # ... and sbatch each job
+uv run generate_runs.py            # write runs/pH{pH}_I{salt}/ with SLURM scripts
+uv run generate_runs.py --submit   # ... and sbatch each job
 ```
 
 Each job equilibrates, then runs umbrella sampling, producing `pmf.csv` and the
-per-window analysis under `runs/pH{pH}_I{salt}/`.
-
-### 2. Analyze
-
-```bash
-cd mc
-uv run plot_pmf.py         # -> all_pmfs.csv, pmf.png (PMF fit, referenced to bulk)
-uv run extract_data.py     # -> charge.csv, polymer_shape.csv, potential.csv
-uv run jupyter lab analysis.ipynb   # merge CSVs and plot per (pH, I) condition
-```
-
-`plot_pmf.py` fits the bulk tail of each PMF to a screened-Coulomb (Yukawa) form
-`PMF(r) = a/r · exp(-r/D) + b` with the Debye length `D` fixed by the ionic
-strength, and subtracts `b` to reference the PMF to zero in the bulk.
-
-### 3. Free-phytate diffusion
-
-Rotational and translational diffusion of free phytate across protonation states,
-from RDKit conformers and PyGRPY bead hydrodynamics:
-
-```bash
-uv run nmr/rotational_diffusion.py      # -> nmr/diffusion.csv
-```
-
-Gives τ_r ≈ 140–165 ps (near-isotropic tumbler). This is a bare-hydrodynamic
-estimate (stick boundary conditions, no ionic-atmosphere friction); see the
-notebook and script docstring for caveats.
-
-### 4. Adsorption models and the manuscript write-up
-
-```bash
-uv run zeta/zeta_gvdw.py       # gvdW model -> fig_zeta.png + probe numbers
-uv run zeta/zeta_crpb.py       # charge-regulated model -> fig_crpb.png, ../itc/fig_itc_crpb.png
-uv run mc/plot_composite.py    # -> composite_I{0.005,0.03,0.15}.png for the SI
-uv run writeup/build.py        # sim_for_mauricio.md -> .docx + .odt (needs pandoc)
-```
-
-`writeup/build.py --pdf` also renders a PDF proof via LibreOffice (`soffice`).
+per-window analysis under `runs/pH{pH}_I{salt}/`. Then run `extract_csvs.py` to
+rebuild the CSV layer.
 
 ## Development
 
 ```bash
-uv run ruff check .    # lint .py and .ipynb
+uv run ruff check .    # lint
 uv run ruff format .   # format
 ```

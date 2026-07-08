@@ -20,7 +20,7 @@ MC feeds two distinct quantities (the brush is a *dipole*: cationic N-terminus a
 the outer binding edge, anionic anchor at the wall):
 
   * binding-plane potential psi_beta -- the MC local potential at the brush
-    periphery (potential.csv, r ~ R_BETA). It carries the dipole: positive at the
+    periphery (potential_profiles.csv, r ~ R_BETA). It carries the dipole: positive at the
     binding edge (+52/+5 mV, pH 4/6, low salt) even where the net monopole is ~0
     or negative, so it *drives binding* at pH 6 where a net-charge Grahame surface
     would predict none. Strongly negative at pH 10 (-89 mV) -> no binding.
@@ -85,7 +85,7 @@ from scipy.optimize import brentq, curve_fit, minimize_scalar
 
 # Reuse the MC-grounded machinery (kappa, Grahame sigma, valence, bare anchors).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import zeta_gvdw as gv  # noqa: E402
+import mc_shared as gv  # noqa: E402
 
 KT_MV = gv.KT_MV
 LB = gv.LB
@@ -102,7 +102,7 @@ I_ANCHOR = 0.005
 GAMMA_MAX = 1.0 / 11.0**2  # PA / A^2
 DILUTION = gv.DILUTION  # emulsion diluted 1000x before the zeta measurement
 PHS = gv.PHS  # (4, 6, 10)
-I_ITC = 0.015  # ITC cell ionic strength (matches itc_fit)
+I_ITC = 0.015  # ITC cell ionic strength (matches fit_thermogram)
 
 # Salt-robust non-electrostatic contact affinity [kT] (specific phosphate-Lys/Arg
 # ion-pairing / H-bonding). It adds to the Langmuir binding free energy and is
@@ -137,7 +137,7 @@ def sigma0(pH: float) -> float:
 def _mc_psi_beta(pH: float, ionic: float) -> float:
     """MC local potential [mV] at the binding plane R_BETA (the dipolar signature).
 
-    Read from potential.csv (total mean potential the phytate feels) and
+    Read from potential_profiles.csv (total mean potential the phytate feels) and
     log-interpolated in ionic strength between the simulated values, so `ionic`
     need not be a simulated one. Positive at pH 4/6 (cationic binding edge),
     strongly negative at pH 10.
@@ -145,7 +145,7 @@ def _mc_psi_beta(pH: float, ionic: float) -> float:
     lo, hi, t = gv._ionic_bracket(ionic)
 
     def at(ii: float) -> float:
-        p = gv._table("potential.csv")
+        p = gv._table("potential_profiles.csv")
         d = p[(p.ionic_strength == ii) & (p.pH == pH)].sort_values("r")
         return float(np.interp(R_BETA, d.r.to_numpy(), d.potential_all_mV.to_numpy()))
 
@@ -264,7 +264,7 @@ def eps_degeneracy(pH: float = 4.0, eps_grid=(0.0, 1.0, 2.0, 3.0, 4.0)):
     cannot rescue the transferred binding; NMR is therefore read from the PMF directly.
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "nmr"))
-    import nmr_binding_bridge as nb  # noqa: E402
+    import binding_fraction as nb  # noqa: E402
 
     a = nb.specific_area(0.5, 3.0)
     n_B = 7.6e-3 * N_A / 1e27
@@ -288,15 +288,15 @@ def fit_itc(pH: float = 4.0, ionic: float = I_ITC, eps_ne: float = EPS_NE):
     K-area fit correlation.
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "itc"))
-    import itc_data  # noqa: E402
-    import itc_fit  # noqa: E402
+    import extract_thermograms as itc_data  # noqa: E402
+    import fit_thermogram as itc_fit  # noqa: E402
 
     titr = itc_data.load(pH)
     grid = np.logspace(-9, -2, 24)
 
     def model(_x, logK, area, dH):
         cov = np.array([crpb_state(pH, ionic, c, 10**logK, eps_ne).gamma for c in grid])
-        return itc_fit._heat_uJ(titr, itc_fit._gvdw_bound(titr, area, grid, cov), dH)
+        return itc_fit._heat_uJ(titr, itc_fit._bound_from_isotherm(titr, area, grid, cov), dH)
 
     popt, pcov = curve_fit(
         model,
@@ -322,8 +322,8 @@ def plot_itc(eps_ne: float, path: Path) -> None:
 
     itc = str(Path(__file__).resolve().parent.parent / "itc")
     sys.path.insert(0, itc)
-    import itc_data  # noqa: E402
-    import itc_fit  # noqa: E402
+    import extract_thermograms as itc_data  # noqa: E402
+    import fit_thermogram as itc_fit  # noqa: E402
 
     # Replicate mean +/- SD from the two matched-scheme runs (rep1 has a different scheme).
     reps = [itc_data.load_xls(Path(itc) / f"pH4/pH4_rep{i}.xls", 4.0) for i in (2, 3)]
@@ -335,7 +335,7 @@ def plot_itc(eps_ne: float, path: Path) -> None:
     grid = np.logspace(-9, -2, 24)
     K, area, dH, _, _ = fit_itc(eps_ne=eps_ne)
     cov = np.array([crpb_state(4.0, I_ITC, c, K, eps_ne).gamma for c in grid])
-    crpb = itc_fit._heat_uJ(titr, itc_fit._gvdw_bound(titr, area, grid, cov), dH)
+    crpb = itc_fit._heat_uJ(titr, itc_fit._bound_from_isotherm(titr, area, grid, cov), dH)
     Ka, dH1, n1, _ = itc_fit.fit_onesite(titr)
     onesite = itc_fit.onesite_heat(titr, Ka, dH1, n1)
 
@@ -354,10 +354,6 @@ def plot_itc(eps_ne: float, path: Path) -> None:
 
 
 # --- probe 3: NMR ----------------------------------------------------------------
-# Measured 31P DeltaR (s^-1): (free PA_aq, OB-PA); f_req = (obs-free)/(Rb-free).
-NMR_DELTA_R = {4.0: (162.0, 559.0), 6.0: (130.0, 430.0), 10.0: (5.1, 52.0)}
-
-
 def nmr_f(
     pH: float,
     ionic: float = 0.15,
@@ -375,17 +371,25 @@ def nmr_f(
     fraction (see module docstring). No fitted K enters.
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "nmr"))
-    import nmr_binding_bridge as nb  # noqa: E402
+    import binding_fraction as nb  # noqa: E402
 
     a = nb.specific_area(phi, d43_um)  # 1/A
     r_w, w0 = gv._pmf_interp(pH, ionic)  # MC PMF (nonel well included)
     k_henry = float(np.trapezoid(np.expm1(-w0), r_w))  # surface partition length [A]
     z = gv.phytate_valence(pH, ionic)
-    return nb.f_bound_gvdw(a, k_henry, pa_mM, 10.6, z, ionic)
+    return nb.bound_fraction(a, k_henry, pa_mM, 10.6, z, ionic)
 
 
 def nmr_f_req(pH: float, Rb: float = 3e4) -> float:
-    free, obs = NMR_DELTA_R[pH]
+    """Bound fraction the two-site fast-exchange model requires from the measured DeltaR.
+
+    Rb is the fully-bound (rigid-limit) rate; f_req = (obs - free)/(Rb - free). The measured
+    (free PA_aq, OB-PA) DeltaR pairs are the single copy in binding_fraction.NMR_DELTA_R.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "nmr"))
+    import binding_fraction as nb  # noqa: E402
+
+    free, obs = nb.NMR_DELTA_R[pH]
     return (obs - free) / (Rb - free)
 
 
@@ -427,7 +431,7 @@ def _sanity(K_by_pH: dict[float, float], eps_ne: float = EPS_NE) -> list[tuple[s
 
 
 def plot_crpb(K_by_pH: dict[float, float], eps_ne: float, path: Path) -> None:
-    """Two-panel CR-PB zeta figure in the zeta_gvdw.py style: experiment as error-bar
+    """Two-panel CR-PB zeta figure in the measured-vs-model style: experiment as error-bar
     markers, CR-PB model as a smooth absolute-prediction line (per-pH K held fixed across
     salt in panel B). A: zeta vs [PA] (low salt); B: zeta vs [NaCl] at 1.5 mM PA, all pH."""
     import matplotlib
@@ -498,8 +502,8 @@ if __name__ == "__main__":
 
     # sigma0 anchor cross-check: the CR model anchors sigma0 to the *measured* bare zeta
     # (monopole), while feeding the *MC* dipolar psi_beta for binding. The MC's own bare
-    # zeta (mc/zeta.csv, shear-plane rule) reveals why they must be kept separate.
-    mcz = gv._table("zeta.csv")
+    # zeta (simulated_zeta.csv, shear-plane rule) reveals why they must be kept separate.
+    mcz = gv._table("simulated_zeta.csv")
     mcz = mcz[mcz.ionic_strength == I_ANCHOR]
     print(f"\nsigma0 anchor cross-check (low salt, {I_ANCHOR * 1e3:.0f} mM):")
     print(f"  {'pH':>4} {'measured':>9} {'MC shear-plane':>15} {'note':>12}")

@@ -17,7 +17,7 @@ from pathlib import Path
 import pandas as pd
 
 SRC = Path(__file__).parent / "Zeta_potential_tidied.xlsx"
-OUT = Path(__file__).parent / "zeta_experimental.csv"
+OUT = Path(__file__).parent / "measured_zeta.csv"
 
 
 def _num(pattern: str, text: str) -> float | None:

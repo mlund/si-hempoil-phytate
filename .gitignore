@@ -1,7 +1,12 @@
 *~
 *.csv
-# hand-curated experimental data, not generated:
-!mc/experimental_zeta.csv
+# committed analysis CSV layer -- reproduces every figure without the large mc/runs/:
+!mc/pmf_profiles.csv
+!mc/window_profiles.csv
+!mc/potential_profiles.csv
+!mc/simulated_zeta.csv
+!zeta/measured_zeta.csv
+!nmr/free_phytate_diffusion.csv
 *.pqr
 *.xtc
 *.dat

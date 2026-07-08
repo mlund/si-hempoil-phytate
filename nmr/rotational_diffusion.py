@@ -11,7 +11,7 @@ we report the ensemble-averaged
     D_t    translational diffusion       isotropic average    [m^2/s]
     a_H    Stokes (hydrodynamic) radius   kT / (6 pi eta D_t)  [A]
 
-and writes a tidy diffusion.csv (one row per charge).
+and writes a tidy free_phytate_diffusion.csv (one row per charge).
 
 Rough-estimate caveats: PyGRPY uses stick boundary conditions (slip could lower
 tau_r by up to ~3x for a sub-nm solute) and models no ionic-atmosphere friction;
@@ -139,7 +139,9 @@ def main():
         default=0.0,
         help="shell thickness [A] added to every bead (try 1.4 for a water shell)",
     )
-    ap.add_argument("--csv", type=Path, default=Path(__file__).parent / "diffusion.csv")
+    ap.add_argument(
+        "--csv", type=Path, default=Path(__file__).parent / "free_phytate_diffusion.csv"
+    )
     args = ap.parse_args()
 
     charges = [int(c) for c in args.charges.split(",")]
