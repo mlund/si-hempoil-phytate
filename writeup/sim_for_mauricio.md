@@ -43,7 +43,7 @@ phytate can overcharge the surface at pH 4. Figure 10 collects the low-salt
 simulation output — the potential of mean force, the phytate charge, the electric
 potential, and the rotational mobility, by pH.
 
-![Figure 10. Low-salt (5 mM) simulation composite by pH: (A) potential of mean force $w(r)$, (B) relative rotational mobility $D(r)/D_0$, (C) electric potential with simulated $\zeta$ (open marker, at the shear plane — the outermost $r$ where the peptide fixed charge exceeds 2% of its peak) and measured $\zeta$ (filled marker, drawn at a fixed offset beside it; its $r$ is arbitrary, only the height is measured), (D) phytate charge, versus distance $r$ from the grafted wall.](../mc/composite_I0.005.png)
+![Figure 10. Low-salt (5 mM) simulation composite by pH: (A) potential of mean force $w(r)$, (B) relative rotational mobility $D(r)/D_0$, (C) electric potential with simulated $\zeta$ (open marker, at the shear plane — the outermost $r$ where the peptide fixed charge exceeds 2% of its peak; this radial position marks the hydrodynamic slip plane and hence the outer extent of the grafted brush, $\approx 36$–$43$ Å from the wall over pH 4–10) and measured $\zeta$ (filled marker, drawn at a fixed offset beside it; its $r$ is arbitrary, only the height is measured), (D) phytate charge, versus distance $r$ from the grafted wall.](../mc/composite_I0.005.png)
 
 The ionizable oleosin termini raise the local electric potential at the brush
 periphery above the surface average: the potential reaches $+52$ mV at the pH-4
