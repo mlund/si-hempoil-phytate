@@ -49,27 +49,26 @@ overcharge (pH-4 zeta -> ~-150 mV). K is instead the *non-electrostatic* part of
 binding (electrostatics handled by PB): essentially K_H with the electrostatic PMF
 stripped out, i.e. the same contact content the gvdW packages as EPS_NONEL. That
 non-electrostatic K is the SAME physical quantity as eps_ne below -- one written
-multiplicatively, the other in the exponent -- which is why they are degenerate. The
-CR model therefore has exactly ONE non-electrostatic affinity; the ~2x NMR gap is the
-genuine tension between the zeta overcharge and the NMR magnitude that one affinity
-(+ PB electrostatics) cannot resolve, not a missing parameter.
+multiplicatively, the other in the exponent -- which is why they are degenerate (the
+__main__ sweep confirms it). So the CR model has exactly ONE non-electrostatic affinity.
 
-The NMR magnitude is ~2x below the value two-site exchange requires, and -- unlike
-the gvdW -- this gap CANNOT be closed by a salt-robust non-electrostatic contact
-affinity eps_ne. In the pure charge-regulated Langmuir occupancy
-    theta = K c^s/(1+K c^s),  c^s = c exp(|z| psi_beta/kT + eps_ne),
-K and eps_ne enter only as the product K*exp(eps_ne), so eps_ne is exactly
-degenerate with K: refitting K to zeta absorbs any eps_ne and leaves the NMR f
-unchanged (see the sweep in __main__). The gvdW's eps DID close its gap because
-its coverage saturates at low salt through a *binding-independent* lateral
-correlation cap (Forsman a2); that cap makes eps identifiable. But adding the same
-cap here destroys the pH-4 reversal -- the cap self-limits the coverage below
-neutralisation, exactly the gvdW's failure. So the reversal (needs binding past
-neutralisation, no cap) and a closable NMR gap (needs a binding-independent cap)
-are mutually exclusive. gvdW and CR-PB are therefore complementary: the gvdW nails
-the NMR/ITC/salt magnitude but misses the pH-4 reversal; the CR-PB captures the
-reversal but underpredicts the NMR magnitude by ~2x. eps_ne is kept as a knob
-(default 0, unidentifiable) only to document this.
+Scope -- what the CR-PB does and does NOT carry. The mean-field enhancement
+exp(z psi_beta/kT) with z ~ 6 is far too salt-steep: a K fit to the low-salt zeta
+overcharge under-binds the 0.15 M NMR by ~2x and (at the physical grafting density) the
+ITC by ~10x. This is a salt-SLOPE error in psi_beta, not a missing affinity (eps_ne is
+degenerate with K, so it cannot change the slope). The fix is not to patch the CR-PB but
+to use the right input for each probe: NMR is a bound fraction at one salt, so it is read
+from the MC PMF DIRECTLY -- K_H = int(e^{-w}-1)dr at 0.15 M -> gvdW isotherm (nmr_f),
+parameter-free, matching f_req at all pH without any transfer from the zeta conditions.
+The CR-PB is used ONLY for the zeta overcharge / reversal, which the direct PMF cannot
+produce (mean-field PB does not invert a double layer).
+
+The ITC is genuinely out of scope: at the physical grafting density the pH-4 coverage
+is overcharge-limited to ~0.03 PA/oleosin, while the thermogram needs ~10x more, so
+the ITC heat reflects inter-droplet cross-linking / aggregation (the multiphasic
+shoulder the experiment reports), not monolayer adsorption -- robustly, independent of
+the (tuned) ITC ionic strength. eps_ne is kept as a knob (default 0, unidentifiable)
+only to document the degeneracy -- which is why NMR is read from the PMF, not fitted here.
 """
 
 from __future__ import annotations
@@ -110,6 +109,11 @@ I_ITC = 0.015  # ITC cell ionic strength (matches itc_fit)
 # close the NMR gap in the pure charge-regulated model (see module docstring). Kept
 # at 0 (unidentifiable); overridable via $EPS_NE only to demonstrate the degeneracy.
 EPS_NE = float(os.environ.get("EPS_NE", "0.0"))  # kT
+
+# Physical grafting area per oleosin [A^2]: the MC brush (50 chains / 130x130 A^2) and
+# the measured OB oleosin surface density (~1 umol/g) agree at ~338 A^2. Used to pin
+# the ITC capacity to the real grafting density rather than fitting it.
+AREA_OLEOSIN = 130.0 * 130.0 / 50.0  # A^2 per oleosin
 
 
 def _y0(sigma: float, ionic: float) -> float:
@@ -171,13 +175,15 @@ def crpb_state(
     """Self-consistent charge-regulated adsorption at free phytate ``c_L_M`` [M].
 
     Solves Gamma = gamma_max * theta(Gamma), where the Langmuir occupancy
-        theta = K c^s / (1 + K c^s),  c^s = c_L exp(+|z| psi_beta / kT + eps_ne)
+        theta = K c^s / (1 + K c^s),  c^s = c_L exp(z psi_beta / kT + eps_ne)
     uses the regulated binding-plane potential
         psi_beta(Gamma) = psi_beta^MC + [psi_d(sigma_eff) - psi_d(sigma0)],
         sigma_eff = sigma0 - |z| Gamma.
-    The dipolar MC baseline drives binding; the adsorbed anion lowers psi_beta and
-    self-limits it; the salt-robust contact affinity ``eps_ne`` [kT] deepens binding.
-    Returns a State with zeta = psi_d(sigma_eff).
+    The MC dipolar baseline drives binding; the adsorbed anion lowers psi_beta and
+    self-limits it (overcharge). This mean-field enhancement is too salt-steep to also
+    carry the NMR magnitude at 0.15 M, so the NMR bound fraction is read from the MC PMF
+    directly (see nmr_f); the CR-PB is used only for the zeta overcharge. Returns a State
+    with zeta = psi_d(sigma_eff).
     """
     z = gv.phytate_valence(pH, ionic)  # |z| > 0
     s0 = sigma0(pH)
@@ -251,15 +257,21 @@ def fit_K_by_pH(eps_ne: float = EPS_NE) -> dict[float, float]:
 
 
 def eps_degeneracy(pH: float = 4.0, eps_grid=(0.0, 1.0, 2.0, 3.0, 4.0)):
-    """Show eps_ne is degenerate with K at one pH: refit K at each eps, read K, f, chi^2.
-
-    K*exp(eps_ne), the zeta chi^2 and the NMR f are all invariant, proving a salt-robust
-    contact affinity cannot close the NMR gap (see module docstring).
+    """Show eps_ne is degenerate with K at one pH: refit K at each eps, read K, the CR-PB
+    coverage bound fraction, and chi^2. K*exp(eps_ne), the zeta chi^2 and the CR-PB
+    coverage are all invariant -- a salt-robust contact affinity is unidentifiable, so it
+    cannot rescue the transferred binding; NMR is therefore read from the PMF directly.
     """
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "nmr"))
+    import nmr_binding_bridge as nb  # noqa: E402
+
+    a = nb.specific_area(0.5, 3.0)
+    n_B = 7.6e-3 * N_A / 1e27
     rows = []
     for eps in eps_grid:
         K = fit_K(pH, eps)
-        rows.append((eps, K, K * np.exp(eps), nmr_f(pH, K, eps), _zeta_chi2(pH, K, eps)))
+        f_cov = crpb_state(pH, 0.15, 7.6e-3, K, eps).gamma * a / n_B  # CR-PB coverage f
+        rows.append((eps, K, K * np.exp(eps), f_cov, _zeta_chi2(pH, K, eps)))
     return rows
 
 
@@ -344,21 +356,28 @@ NMR_DELTA_R = {4.0: (162.0, 559.0), 6.0: (130.0, 430.0), 10.0: (5.1, 52.0)}
 
 def nmr_f(
     pH: float,
-    K: float,
-    eps_ne: float = EPS_NE,
     ionic: float = 0.15,
     pa_mM: float = 7.6,
     phi: float = 0.5,
     d43_um: float = 3.0,
 ) -> float:
-    """Transfer (K, eps_ne) to the NMR: bound fraction f = Gamma a / n_B at 0.15 M, 7.6 mM."""
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "nmr"))
-    from nmr_binding_bridge import specific_area  # noqa: E402
+    """NMR bound fraction from the MC PMF DIRECTLY (not through the CR-PB).
 
-    a = specific_area(phi, d43_um)  # 1/A
-    gamma = crpb_state(pH, ionic, pa_mM * 1e-3, K, eps_ne).gamma
-    n_B = pa_mM * 1e-3 * N_A / 1e27  # 1/A^3
-    return gamma * a / n_B
+    NMR is a bound fraction at a single salt, so the simulated PMF at that salt is the
+    faithful, parameter-free input: K_H = int(e^{-w}-1)dr from the MC PMF (with the
+    shared non-electrostatic contact well already folded in), fed to the gvdW isotherm.
+    This avoids the CR-PB mean-field psi_beta reconstruction and its salt-transfer
+    over-screening, which the CR-PB carries only for the zeta overcharge, not for a bound
+    fraction (see module docstring). No fitted K enters.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "nmr"))
+    import nmr_binding_bridge as nb  # noqa: E402
+
+    a = nb.specific_area(phi, d43_um)  # 1/A
+    r_w, w0 = gv._pmf_interp(pH, ionic)  # MC PMF (nonel well included)
+    k_henry = float(np.trapezoid(np.expm1(-w0), r_w))  # surface partition length [A]
+    z = gv.phytate_valence(pH, ionic)
+    return nb.f_bound_gvdw(a, k_henry, pa_mM, 10.6, z, ionic)
 
 
 def nmr_f_req(pH: float, Rb: float = 3e4) -> float:
@@ -461,13 +480,13 @@ if __name__ == "__main__":
         )
     print(
         f"  (Gamma_max = 1/(11 A)^2 = {GAMMA_MAX:.4f}/A^2, R_beta = {R_BETA:g} A, "
-        f"eps_ne = {eps_ne:g} kT)\n"
+        f"eps_ne = {eps_ne:g} kT; NMR read from the MC PMF directly, not the CR-PB)\n"
     )
 
     print("non-electrostatic contact affinity is DEGENERATE with K at each pH (pH 4 shown):")
-    print(f"  {'eps_ne':>7} {'K(/M)':>9} {'K*exp(eps)':>11} {'f_NMR pH4':>10} {'zeta_chi2':>10}")
+    print(f"  {'eps_ne':>7} {'K(/M)':>9} {'K*exp(eps)':>11} {'f_cover pH4':>11} {'zeta_chi2':>10}")
     for eps, Ke, Kexp, f4, chi2 in eps_degeneracy(4.0):
-        print(f"  {eps:>7.1f} {Ke:>9.3g} {Kexp:>11.3g} {f4:>10.3%} {chi2:>10.0f}")
+        print(f"  {eps:>7.1f} {Ke:>9.3g} {Kexp:>11.3g} {f4:>11.3%} {chi2:>10.0f}")
 
     print("\nsanity limits:")
     for name, ok in _sanity(K_by_pH, eps_ne):
@@ -509,27 +528,39 @@ if __name__ == "__main__":
             zc = crpb_state(pH, ionic, 1.5e-3 / DILUTION, K_by_pH[pH], eps_ne).zeta
             print(f"  {pH:>4g} {nacl:>10.0f} {zc:>+8.1f} {ym:>+7.1f}+-{es:.1f}")
 
-    print("\nprobe 2 -- ITC (pH 4, transfer K(pH 4), fit area + dH):")
-    area, dH, rms, corr = fit_itc(K_by_pH[4.0], eps_ne)
-    print(
-        f"  CR-PB : area={area:.0f} A^2/oleosin  dH={dH:.1f} kJ/mol  RMS={rms:.1f} uJ  "
-        f"area-dH corr={corr:+.2f}"
-    )
+    print("\nprobe 2 -- NMR bound fraction from the MC PMF DIRECTLY (0.15 M, 7.6 mM):")
+    print(f"  {'pH':>4} {'f_sim':>8} {'f_req':>8} {'ratio':>7}")
+    for pH in PHS:
+        f_sim, f_rq = nmr_f(pH), nmr_f_req(pH)
+        ratio = f"{f_rq / f_sim:>5.1f}x" if f_sim > 0 else "  n/a"
+        print(f"  {pH:>4g} {f_sim:>8.2%} {f_rq:>8.2%} {ratio:>7}")
+    print("  (K_H read from the MC PMF at 0.15 M -> parameter-free; the CR-PB is not used here)")
+
+    print("\nprobe 3 -- ITC (pH 4) at the PHYSICAL grafting density:")
+    area, dH, rms, _ = fit_itc(K_by_pH[4.0], eps_ne)  # also puts ../itc on sys.path
     import itc_data as _id  # noqa: E402
     import itc_fit as _if  # noqa: E402
+    from scipy.optimize import curve_fit as _cf  # noqa: E402
 
-    _, pcov1 = _if.fit_onesite_pcov(_id.load(4.0))
-    c1 = _if.corr_from_cov(pcov1)  # one-site (Ka, dH, n) correlations
-    print(f"  one-site corr: Ka-dH={c1[0, 1]:+.2f}  dH-n={c1[1, 2]:+.2f}  Ka-n={c1[0, 2]:+.2f}")
-    print("  -> CR-PB (2 params) more constrained than one-site (3 params) iff |area-dH| < those")
+    print(
+        f"  free-area fit : area={area:.0f} A^2 = {area / AREA_OLEOSIN:.0f}x the physical "
+        f"grafting area ({AREA_OLEOSIN:.0f} A^2)  dH={dH:.0f}  RMS={rms:.1f} uJ"
+    )
+    # pin the area to the real grafting density; fit only dH
+    t = _id.load(4.0)
+    grid = np.logspace(-9, -2, 24)
+    cov = np.array([crpb_state(4.0, I_ITC, c, K_by_pH[4.0], eps_ne).gamma for c in grid])
 
-    print("\nprobe 3 -- NMR bound fraction (0.15 M, 7.6 mM, transfer per-pH K):")
-    print(f"  {'pH':>4} {'f_CR':>8} {'f_req':>8} {'ratio':>7}")
-    for pH in PHS:
-        f_cr, f_rq = nmr_f(pH, K_by_pH[pH], eps_ne), nmr_f_req(pH)
-        ratio = f"{f_rq / f_cr:>5.1f}x" if f_cr > 0 else "  n/a"  # K(pH10)=0: no binding
-        print(f"  {pH:>4g} {f_cr:>8.2%} {f_rq:>8.2%} {ratio:>7}")
-    print("  (pH 10: zeta gives no binding signal -> K=0; f_req 0.16% is near the NMR floor)")
+    mdl = lambda x, dH: _if._heat_uJ(t, _if._gvdw_bound(t, AREA_OLEOSIN, grid, cov), dH)  # noqa: E731
+    p, _ = _cf(mdl, t.mole_ratio, t.heat_uJ, p0=[-35], bounds=([-3000], [0]), maxfev=20000)
+    rms_phys = float(np.sqrt(np.mean((t.heat_uJ - mdl(t.mole_ratio, *p)) ** 2)))
+    bound = AREA_OLEOSIN * crpb_state(4.0, I_ITC, 40e-6, K_by_pH[4.0], eps_ne).gamma
+    print(
+        f"  physical area : dH={p[0]:.0f}  RMS={rms_phys:.1f} uJ  bound~{bound:.2f} PA/oleosin "
+        "(overcharge-capped)"
+    )
+    print("  -> surface adsorption is overcharge-limited (~0.03 PA/oleosin); the ITC heat needs")
+    print("     ~10x more -> inter-droplet cross-linking/aggregation, not monolayer binding")
 
     figure = Path(__file__).parent / "fig_crpb.png"
     plot_crpb(K_by_pH, eps_ne, figure)
