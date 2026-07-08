@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "MC analysis of phytate near an oleosin peptide brush (Faunus), plus free-phytate hydrodynamic diffusion estimates."
 requires-python = ">=3.12"
 dependencies = [
-    # PMF / charge / potential / shape analysis (mc/plot_pmf.py, mc/extract_data.py, mc/analysis.ipynb)
+    # PMF / charge / potential / shape analysis (mc/extract_pmf.py, mc/extract_profiles.py)
     "numpy>=2.5",
     "pandas>=3.0",
     "matplotlib>=3.11",
@@ -26,7 +26,12 @@ package = false
 [dependency-groups]
 dev = [
     "ruff>=0.15.20",
+    "pytest>=8.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["zeta"]  # flat modules: import charge_regulation / mc_shared directly
 
 [tool.ruff]
 line-length = 100

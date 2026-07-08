@@ -75,6 +75,7 @@ peptide-brush wall.
 ## Development
 
 ```bash
+uv run pytest        # CR-PB sanity/unit + regression tests (tests/)
 uv run ruff check .
 uv run ruff format .
 ```
