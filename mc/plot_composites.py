@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Composite MC figure (PMF, rotational mobility, potential, phytate charge) by pH,
+"""Composite MC figure (PMF, orientational order, potential, phytate charge) by pH,
 for one ionic strength -- the salt-resolved companion to ``composite_lowsalt.png``.
 
 Reproduces the four-panel low-salt composite from ``analysis.ipynb`` for any simulated
@@ -31,7 +31,7 @@ def _sel(df: pd.DataFrame, ionic: float, pH: float) -> pd.DataFrame:
 def plot_composite(ionic: float, path: Path) -> None:
     """Four-panel composite at ionic strength ``ionic`` (M)."""
     pmf = pd.read_csv(HERE / "pmf_profiles.csv")
-    win = pd.read_csv(HERE / "window_profiles.csv")  # phytate charge + rotational mobility
+    win = pd.read_csv(HERE / "window_profiles.csv")  # phytate charge + orientational order
     pot = pd.read_csv(HERE / "potential_profiles.csv")
     zeta = pd.read_csv(HERE / "simulated_zeta.csv")
     # Measured bare-OB zeta vs added salt (PA = 0), interpolated to this ionic strength.
@@ -41,6 +41,7 @@ def plot_composite(ionic: float, path: Path) -> None:
 
     fig, axes = plt.subplots(2, 2, figsize=(8, 6), sharex=True)
     (axA, axB), (axC, axD) = axes
+    axB_pose = axB.twinx()  # S_wall shares panel B with S^2, on its own right-hand axis
     for pH in PHS:
         c = PH_COLOR[pH]
         p = _sel(pmf, ionic, pH)
@@ -48,7 +49,13 @@ def plot_composite(ionic: float, path: Path) -> None:
         axA.plot(p.r, p.pmf_kT, color=c, label=f"pH {pH:g}")
 
         m = _sel(win, ionic, pH)
-        axB.plot(m.r, m.msd_rot / m.msd_rot.iloc[-3:].mean(), color=c)
+        # Frame-independent P-O bond order parameter -- the NMR-relevant restriction.
+        if "s2" in m:
+            axB.plot(m.r, pd.to_numeric(m.s2, errors="coerce"), color=c, lw=1.2)
+        # Lab-frame disk pose (face-on/edge-on) -- a structural diagnostic, NOT the NMR
+        # quantity; dashed so it is never confused with S^2.
+        if "s_wall" in m:
+            axB_pose.plot(m.r, pd.to_numeric(m.s_wall, errors="coerce"), color=c, ls="--", lw=1.0)
 
         v = _sel(pot, ionic, pH)
         axC.plot(v.r, v.potential_all_mV, color=c)
@@ -70,8 +77,19 @@ def plot_composite(ionic: float, path: Path) -> None:
 
     axA.axhline(0, color="gray", ls="--", lw=0.5)
     axA.set_ylabel(r"PMF ($k_\mathrm{B}T$)")
-    axB.axhline(1, color="gray", ls="--", lw=0.5)
-    axB.set_ylabel(r"$D(r)/D_0$ (rotational)")
+    axB.set_ylabel(r"$S^2$  (P–O bond, NMR)")
+    axB.set_ylim(bottom=0)
+    axB_pose.set_ylabel(r"$S_\mathrm{wall}$  (disk pose)")
+    axB_pose.axhline(0, color="gray", ls=":", lw=0.5)  # isotropic-pose reference
+    axB.legend(
+        handles=[
+            Line2D([], [], color="gray", ls="-", label=r"$S^2$ (bond)"),
+            Line2D([], [], color="gray", ls="--", label=r"$S_\mathrm{wall}$ (pose)"),
+        ],
+        frameon=False,
+        fontsize="small",
+        loc="upper right",
+    )
     axC.axhline(0, color="gray", ls="--", lw=0.5)
     axC.set_ylabel("electric potential (mV)")
     axC.set_ylim(-90, 60)

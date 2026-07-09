@@ -14,6 +14,16 @@ The MC RotateMolecule moves report a per-attempt mean-square angular displacemen
 pooled over the phytate protonation states this is a rough rotational-mobility
 proxy, giving D(r)/D0 ~ msd_rot(r) / msd_rot(bulk).
 
+The WidomRotation analysis adds a step-size-independent orientational measure: the
+mean Lipari-Szabo order parameter s2 (0 = freely tumbling, 1 = locked) and the
+orientation-averaged free energy widom_w [kJ/mol]. Older runs lacking the analysis
+leave these columns blank.
+
+The PolymerShape gyration tensor additionally yields s_wall = (3 Szz/Rg^2 - 1)/2,
+the P2 order parameter of the disk-like phytate's mass distribution about the wall
+normal z (0 isotropic, -1/2 face-on, +1 edge-on) -- a lab-frame *pose* diagnostic,
+distinct from the frame-independent NMR s2 (see wall_alignment).
+
 The potential analysis also samples the charge density sigma(z). We estimate a
 zeta potential as the total potential at the hydrodynamic shear plane, taken at
 the outer edge of the fixed brush charge (largest r where |sigma_peptide| exceeds
@@ -24,7 +34,8 @@ Writes three tidy CSVs for pandas.read_csv. The three per-window observables (ph
 and peptide charge, rotational MSD, and the gyration-tensor shape) all live on the same
 window-centre r-grid, so they are merged into one wide table:
   window_profiles.csv    pH, ionic_strength, r, q_ino, q_ino_err, q_peptide,
-                         q_peptide_err, msd_rot, <shape descriptors...>
+                         q_peptide_err, msd_rot, s2, s2_err, widom_w, s_wall,
+                         <shape descriptors...>
   potential_profiles.csv pH, ionic_strength, r, potential_all_mV, potential_peptide_mV,
                          sigma_peptide_e_A2   (full-slit profile, its own r-grid)
   simulated_zeta.csv     pH, ionic_strength, r_shear, zeta_mV   (one row per condition)
@@ -104,12 +115,34 @@ def rotation_msd(doc) -> float:
     return total_sq / total_n if total_n else float("nan")
 
 
+def wall_alignment(shape) -> float | str:
+    """P2 order parameter of the disk-like phytate's gyration tensor about the wall
+    normal z: s_wall = (3 Szz/Rg^2 - 1)/2, with Rg^2 = Sxx + Syy + Szz.
+
+    0 = isotropic; -1/2 = face-on (disk plane parallel to the wall); +1 = edge-on.
+    A lab-frame *pose* diagnostic, distinct from the frame-independent NMR s2.
+    Returns "" when the gyration-tensor columns are absent (shapeless window).
+    """
+    try:
+        sxx, syy, szz = shape["Sxx"], shape["Syy"], shape["Szz"]
+    except KeyError:
+        return ""
+    rg2 = sxx + syy + szz
+    return (3 * szz / rg2 - 1) / 2 if rg2 else ""
+
+
 def parse_window(output_yaml: Path):
-    """Return (z, [(selection, charge, err), ...], shape_dict, rot_msd) for one window."""
+    """Return (z, charges, shape_dict, rot_msd, widom) for one window.
+
+    `charges` is a list of (selection, charge, err); `widom` is the tuple
+    (s2, s2_err, widom_w) from the WidomRotation analysis, or (None, None, None)
+    for runs predating it.
+    """
     doc = load_yaml(output_yaml)
     z = None
     charges = []
     shape = None
+    widom = (None, None, None)
     for item in doc["analysis"]:
         ((key, val),) = item.items()  # each analysis entry is a single-key mapping
         if key == "collectivevariable" and val.get("property") == "AtomPosition":
@@ -119,7 +152,9 @@ def parse_window(output_yaml: Path):
             charges.append((val["selection"], mean, error))
         elif key == "polymershape":
             shape = {k: v for k, v in val.items() if k != "num_samples"}
-    return z, charges, shape, rotation_msd(doc)
+        elif key == "widomrotation":
+            widom = (val["mean_S2"]["mean"], val["mean_S2"]["error"], val["W/kJ/mol"]["mean"])
+    return z, charges, shape, rotation_msd(doc), widom
 
 
 def mean_profile(profile_csvs, cols) -> tuple:
@@ -198,7 +233,7 @@ def main() -> None:
         # r-grid, so each window yields one merged row.
         windows = sorted(run.glob("umbrella_states/window*_output.yaml"), key=window_index)
         for win in windows:
-            z, charges, shape, msd = parse_window(win)
+            z, charges, shape, msd, (s2, s2_err, widom_w) = parse_window(win)
             if z is None:
                 continue
             r = z + half_lz
@@ -225,6 +260,10 @@ def main() -> None:
                     q["q_peptide"],
                     q.get("q_peptide_err", ""),
                     msd,
+                    "" if s2 is None else s2,
+                    "" if s2_err is None else s2_err,
+                    "" if widom_w is None else widom_w,
+                    wall_alignment(clean),
                     clean,
                 ]
             )
@@ -246,6 +285,10 @@ def main() -> None:
                 "q_peptide",
                 "q_peptide_err",
                 "msd_rot",
+                "s2",
+                "s2_err",
+                "widom_w",
+                "s_wall",
                 *shape_fields,
             ]
         )

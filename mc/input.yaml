@@ -146,9 +146,9 @@ analysis:
 # - !Trajectory
 #   file: "traj.xtc"
 #   frequency: !Every 1000
-  - !Energy
-    file: "energy.csv.gz"
-    frequency: !Every 1000
+# - !Energy
+#   file: "energy.csv.gz"
+#   frequency: !Every 1000
   - !Multipole
     selection: "molecule peptide"
     frequency: !Every 10
@@ -163,6 +163,25 @@ analysis:
   - !Multipole
     selection: "atomtype INO"
     frequency: !Every 10
+  # Widom rotational perturbation: the orientational restriction the surroundings
+  # impose on the phytate held at each umbrella window. It is an equilibrium
+  # free-energy average over trial orientations, so -- unlike the RotateMolecule
+  # acceptance MSD used before -- it carries no dependence on any move step size.
+  # mean_S2 (Lipari-Szabo, over the six phosphate->centre ester-proxy vectors that
+  # stand in for the 31P CSA axes) is the bound-state order parameter feeding the
+  # NMR delta-R; combine the per-window values into S^2(r). See writeup S-5.
+  - !WidomRotation
+    selection: "atomtype INO"   # phytate's unique centre bead -> survives speciation name swaps
+    orientations: 500
+    vectors:
+      {% for j in range(1, 7) %}
+      - !pair [0, {{ j }}]       # phosphate j -> inositol centre (31P ester-bond proxy)
+      {% endfor %}
+      - !axis 2                  # largest gyration axis (phytate near-spherical, so secondary)
+    torque: true
+    stiffness: true
+    file: widomrot.csv.gz
+    frequency: !Every 50         # remember: 500 evals/sample -> keep sparse; tune to run length
   {% for i in range(n_states) %}
   - !CollectiveVariable
     property: count
