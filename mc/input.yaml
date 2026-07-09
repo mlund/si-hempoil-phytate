@@ -140,9 +140,19 @@ analysis:
     file: potential_all.csv
   - !ElectricPotentialProfile
     frequency: !Every 10
-    selection: "molecule peptide" 
+    selection: "molecule peptide"
     resolution: 0.5
     file: potential_peptide.csv
+  # Structural monomer density of the brush. The Zwanzig roughness amplitude scales with
+  # the local density of peptide contacts, so this -- not the sign-changing peptide charge
+  # density -- sets the roughness profile g(r) that renormalises the PMF and D. Binning
+  # atoms (use_com off) is what makes it a monomer profile rather than a grafting-point
+  # spike. See writeup S-5.
+  - !DensityProfile
+    frequency: !Every 10
+    selection: "molecule peptide"
+    resolution: 0.5
+    file: peptide_profile.csv
 # - !Trajectory
 #   file: "traj.xtc"
 #   frequency: !Every 1000

@@ -30,6 +30,12 @@ the outer edge of the fixed brush charge (largest r where |sigma_peptide| exceed
 a small fraction of its peak). Magnitude is shear-plane dependent; the sign and
 pH-trend are the meaningful output.
 
+The DensityProfile analysis gives the brush monomer density rho_peptide(r), which sets the
+Zwanzig roughness profile used by zeta/mc_shared.py. It must come from the monomer density
+rather than sigma_peptide, which changes sign at the anchor (negative near the wall, positive
+through the brush) and is pH-dependent, whereas the roughness is structural. Older runs
+lacking the analysis leave the column blank.
+
 Writes three tidy CSVs for pandas.read_csv. The three per-window observables (phytate
 and peptide charge, rotational MSD, and the gyration-tensor shape) all live on the same
 window-centre r-grid, so they are merged into one wide table:
@@ -37,7 +43,7 @@ window-centre r-grid, so they are merged into one wide table:
                          q_peptide_err, msd_rot, s2, s2_err, widom_w, s_wall,
                          <shape descriptors...>
   potential_profiles.csv pH, ionic_strength, r, potential_all_mV, potential_peptide_mV,
-                         sigma_peptide_e_A2   (full-slit profile, its own r-grid)
+                         sigma_peptide_e_A2, rho_peptide_A3  (full-slit profile, own r-grid)
   simulated_zeta.csv     pH, ionic_strength, r_shear, zeta_mV   (one row per condition)
 """
 
@@ -161,8 +167,10 @@ def mean_profile(profile_csvs, cols) -> tuple:
     """Average the requested data columns over a set of same-grid profiles.
 
     Columns of potential_*.csv: z/Å (0), slab_charge_density/e·Å⁻² (1),
-    charge_density/e·Å⁻³ (2), potential/mV (3), error (4), field (5). The grid is
-    identical across windows. Returns (z, mean_col, ...) for each column in `cols`.
+    charge_density/e·Å⁻³ (2), potential/mV (3), error (4), field (5).
+    Columns of peptide_profile.csv: z/Å (0), density/Å⁻³ (1), its error (2), then
+    molarity and mass density with their errors.
+    The grid is identical across windows. Returns (z, mean_col, ...) for each column in `cols`.
     """
     profiles = [
         np.genfromtxt(p, delimiter=",", skip_header=1, usecols=(0, *cols)) for p in profile_csvs
@@ -222,8 +230,20 @@ def main() -> None:
         z, pot_all = mean_profile(all_csvs, (3,))
         _, pot_peptide, sigma_peptide = mean_profile(pep_csvs, (3, 1))  # potential + charge density
         r_prof = z + half_lz
-        for ri, pa, pp, sp in zip(r_prof, pot_all, pot_peptide, sigma_peptide, strict=True):
-            potential_rows.append([ph, ionic, ri, pa, pp, sp])
+
+        # Brush monomer density -> the Zwanzig roughness profile. DensityProfile lays out its
+        # own slabs, so map it onto the potential grid rather than assuming shared bin centres.
+        dens_csvs = sorted(run.glob("umbrella_states/window*/peptide_profile.csv"))
+        if dens_csvs:
+            z_rho, rho = mean_profile(dens_csvs, (1,))
+            rho_peptide = np.interp(z, z_rho, rho)
+        else:
+            rho_peptide = [""] * len(z)  # older runs predate the DensityProfile analysis
+
+        for ri, pa, pp, sp, rho_i in zip(
+            r_prof, pot_all, pot_peptide, sigma_peptide, rho_peptide, strict=True
+        ):
+            potential_rows.append([ph, ionic, ri, pa, pp, sp, rho_i])
 
         # Zeta at the fixed-charge edge of the brush (sigma_peptide -> 0).
         r_shear, zeta = shear_zeta(r_prof, sigma_peptide, pot_all, half_lz)
@@ -306,6 +326,7 @@ def main() -> None:
                 "potential_all_mV",
                 "potential_peptide_mV",
                 "sigma_peptide_e_A2",
+                "rho_peptide_A3",
             ]
         )
         w.writerows(potential_rows)
