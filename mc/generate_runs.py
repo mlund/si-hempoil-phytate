@@ -34,7 +34,7 @@ STRUCTURE = ROOT / "phytate.xyz"
 # Kept as strings so the folder name and the YAML value stay byte-identical
 # (e.g. "0.030", "1000") rather than risking float reformatting.
 PH_RANGE = [4, 6, 10]
-SALT_RANGE = ["0.005", "0.030", "0.15", "1000"]
+SALT_RANGE = ["0.005", "0.030", "0.15"]
 MATRIX = [(pH, salt) for pH in PH_RANGE for salt in SALT_RANGE]
 
 
