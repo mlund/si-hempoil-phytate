@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extract per-window mean charge and polymer shape as functions of r.
 
-Each umbrella window's <run>/umbrella_states/window*_output.yaml holds an
+Each umbrella window's <run>/umbrella_states/window*/output.yaml holds an
 `analysis` block with the Multipole (mean charge, once per selection) and
 PolymerShape analyses. The window's position is the mean phytate (INO) z from its
 AtomPosition collective variable, converted to r = z + Lz/2 (distance from the
@@ -89,14 +89,22 @@ def ionic_strength_from_name(name: str) -> float:
     return float(re.search(r"I([0-9.]+)", name).group(1))
 
 
-def parse_pm(value: str) -> tuple[float, float]:
-    """Split a Faunus 'mean ± error' string into floats."""
+def parse_pm(value) -> tuple[float, float]:
+    """Return (mean, error) from a Faunus multipole moment.
+
+    Current Faunus (PR #fd0422e) emits a {mean, error} mapping; older runs wrote a
+    'mean ± error' string. Accept either.
+    """
+    if isinstance(value, dict):
+        return float(value["mean"]), float(value.get("error", 0.0))
     mean, error = value.split("±")
     return float(mean), float(error)
 
 
 def window_index(path: Path) -> int:
-    return int(re.search(r"window(\d+)_output", path.name).group(1))
+    # Faunus nests per-window files as umbrella_states/window{i}/output.yaml (PR #61ccb6a);
+    # older runs used umbrella_states/window{i}_output.yaml. Read the index from either.
+    return int(re.search(r"window(\d+)", str(path)).group(1))
 
 
 def rotation_msd(doc) -> float:
@@ -151,6 +159,10 @@ def parse_window(output_yaml: Path):
     widom = (None, None, None)
     for item in doc["analysis"]:
         ((key, val),) = item.items()  # each analysis entry is a single-key mapping
+        # Faunus PR #74 switched output-section names to snake_case (widomrotation ->
+        # widom_rotation, ...). Strip underscores so both the pre- and post-#74 layouts
+        # parse -- lets the archived runs.zip and freshly generated runs share this code.
+        key = key.replace("_", "")
         if key == "collectivevariable" and val.get("property") == "AtomPosition":
             z = val["mean"]  # mean phytate (INO) z for this window
         elif key == "multipole":
@@ -251,7 +263,13 @@ def main() -> None:
 
         # Per-window observables (charge, shape, rotational MSD) share the window-centre
         # r-grid, so each window yields one merged row.
-        windows = sorted(run.glob("umbrella_states/window*_output.yaml"), key=window_index)
+        windows = sorted(
+            [
+                *run.glob("umbrella_states/window*/output.yaml"),  # nested layout (current)
+                *run.glob("umbrella_states/window*_output.yaml"),  # flat layout (archived runs)
+            ],
+            key=window_index,
+        )
         for win in windows:
             z, charges, shape, msd, (s2, s2_err, widom_w) = parse_window(win)
             if z is None:

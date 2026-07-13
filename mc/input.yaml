@@ -20,7 +20,11 @@
 {% set n_phytate = 5 %}
 {% set num_windows = 40 %}{# adjust to match available cores #}
 {% set window_width = 6.0 %}
-{% set window_spacing = (Lz / 2 - window_width) / (num_windows - 1) %}
+{% set bin_width = 0.5 %}
+{# Faunus (PR #75) requires the window spacing to be an integer multiple of bin_width, so snap
+   the even split of the sampled range onto the bin grid. Stays < window_width, i.e. windows
+   overlap, which the same validator also requires. #}
+{% set window_spacing = ((Lz / 2 - window_width) / (num_windows - 1) / bin_width) | round | int * bin_width %}
 {% set active_state = 9 %}
 {# Phytate protonation states: name, pKa for deprotonation to next state #}
 {% set pa_names = ["H₁₂PA", "H₁₁PA¹⁻", "H₁₀PA²⁻", "H₉PA³⁻", "H₈PA⁴⁻", "H₇PA⁵⁻",
@@ -136,9 +140,7 @@ system:
           - !AshbaughHatch {epsilon: {{ epsilon }}, sigma: {{ ((ph_sigma + aa_s) / 2) | round(4) }}, wca: true}
         {% endfor %}
         {% endfor %}
-    bonded: true
-
-    customexternal:
+    custom_external:
       - selection: "name ANK and molecule peptide"
         function: "0.5 * k * (z - z0)^2"
         constants:
@@ -222,11 +224,11 @@ propagate:
       moves:
       # - !TranslateAtom {molecule: peptide, dp: 10.0, repeat: 10}
         - !TranslateMolecule {molecule: peptide, dp: 10.0, repeat: 10, directions: xy}
-        - !RotateMolecule {molecule: peptide, dp: 0.2, repeat: 10}
-        - !PivotMove {molecule: peptide, dp: 0.5, repeat: 10}
+        - !RotateMolecule {molecule: peptide, max_angle: 0.2, repeat: 10}
+        - !PivotMove {molecule: peptide, max_angle: 0.5, repeat: 10}
         {% for i in range(n_states) %}
         - !TranslateMolecule {molecule: "{{ pa_names[i] }}", dp: 5.0, repeat: 20, directions: z}
-        - !RotateMolecule {molecule: "{{ pa_names[i] }}", dp: 1.0, repeat: 1}
+        - !RotateMolecule {molecule: "{{ pa_names[i] }}", max_angle: 1.0, repeat: 1}
         {% endfor %}
         - !SpeciationMove
           temperature: 298.15
@@ -250,7 +252,7 @@ umbrella:
   windows:
     range: [{{ -Lz / 2 }}, 0]
     width: {{ window_width }}
-    spacing: {{ window_spacing | round(2) }}
-    bin_width: 0.5
+    spacing: {{ window_spacing }}
+    bin_width: {{ bin_width }}
   drive:
     force_constant: 5.0
