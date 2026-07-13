@@ -81,6 +81,12 @@ def fit_tail(r, pmf, err, debye, window):
     # The bulk is the box centre, at the largest sampled r; fit the screened tail
     # in the `window` Å approaching it.
     mask = r >= r.max() - window
+    # Guard against a non-positive stderr, which would give a bin infinite 1/err weight and
+    # break the least-squares solve. Faunus PR #80 made stderr a Poisson sampling error
+    # (RT/sqrt(sum N), always > 0), so this only bites the archived pre-#80 runs, where stderr
+    # was the inter-window dispersion and collapsed to a literal 0 in well-stitched bins. The
+    # fit is a plateau over many bins, so dropping one is immaterial either way.
+    mask &= err > 0
     rw, pmfw, errw = r[mask], pmf[mask], err[mask]
 
     basis = np.column_stack([np.exp(-rw / debye), np.ones_like(rw)])
