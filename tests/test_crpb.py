@@ -120,8 +120,9 @@ def test_fit_K_per_pH_regression():
     assert K[10.0] == 0.0  # pH 10 is repulsive -> no direct binding
 
 
-@pytest.mark.parametrize("pH,f_expected", [(4.0, 0.0130), (6.0, 0.0105), (10.0, 0.0011)])
+@pytest.mark.parametrize("pH,f_expected", [(4.0, 0.0132), (6.0, 0.0089), (10.0, 0.0013)])
 def test_nmr_bound_fraction_regression(pH, f_expected):
+    # Pinned to the integer-charge production runs (K_H = 970/704/24 Å at pH 4/6/10).
     assert cr.nmr_f(pH) == pytest.approx(f_expected, rel=0.1)
 
 
