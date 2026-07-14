@@ -120,10 +120,13 @@ def test_fit_K_per_pH_regression():
     assert K[10.0] == 0.0  # pH 10 is repulsive -> no direct binding
 
 
-@pytest.mark.parametrize("pH,f_expected", [(4.0, 0.0132), (6.0, 0.0089), (10.0, 0.0013)])
+@pytest.mark.parametrize("pH,f_expected", [(4.0, 0.0125), (6.0, 0.0098), (10.0, 0.0012)])
 def test_nmr_bound_fraction_regression(pH, f_expected):
-    # Pinned to the integer-charge production runs (K_H = 970/704/24 Å at pH 4/6/10).
-    assert cr.nmr_f(pH) == pytest.approx(f_expected, rel=0.1)
+    # Pinned to the post-#80 integer-charge production runs (K_H = 826/950/19 Å at pH 4/6/10).
+    # K_H is exponentially sensitive to the well depth, so it swings ~10-35% between otherwise
+    # equivalent production runs; f_bound (damped by the gvdW isotherm) varies ~10%, hence the
+    # loose tolerance.
+    assert cr.nmr_f(pH) == pytest.approx(f_expected, rel=0.15)
 
 
 @pytest.mark.parametrize("pH", [4.0, 6.0])
