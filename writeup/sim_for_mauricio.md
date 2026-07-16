@@ -92,9 +92,11 @@ spectral-density, and possible exchange contributions (Quinn & McDermott, 2012).
 OB-induced increment,
 $[R_{1\rho}-R_1]_\mathrm{OB-PA}-[R_{1\rho}-R_1]_\mathrm{aq}$, is $397\pm51$,
 $302\pm14$, and $46.9\pm2.1$ s⁻¹ at pH 4, 6, and 10, respectively. The relaxation
-perturbation is therefore larger at pH 4 and 6 than at pH 10. One value per pH cannot
-determine an adsorbed fraction without a bound-state relaxation function and an
-exchange model (Supplementary Section S-5).
+perturbation is therefore larger at pH 4 and 6 than at pH 10. This pH dependence
+qualitatively follows the simulated interaction: the MC PMF is attractive at pH 4 and
+6 but repulsive at pH 10. The comparison assigns neither an adsorbed fraction nor a
+rotational timescale. Quantitative population analysis would require a bound-state
+relaxation function and an exchange model (Supplementary Section S-5).
 
 The Widom calculation provides a separate equilibrium comparison. At the nominal
 binding plane and $I=0.15$ M, $S^2_\mathrm{ens}$ is
@@ -284,6 +286,10 @@ the MC simulation. Self-consistency refers instead to the surface problem. For e
 trial coverage, PB calculates the charging free energy from the corresponding
 effective surface charge; that free energy changes the equilibrium coverage. We solve
 this feedback by minimizing one surface grand potential globally (Figure S2).
+
+Mathematically, LC–AR-PB is a reduced surface classical density-functional theory
+(cDFT): its sole density variable is the laterally uniform $\Gamma$, and PB integrates
+out the diffuse ions. It is not a nonlocal cDFT for lateral density variations.
 
 ![Figure S2. LC–AR-PB construction. Blue denotes fixed MC input, purple experimental and prescribed surface inputs, grey the bare PB state, and red the coverage-dependent PB response. (A) The one-phytate MC calculation supplies the peptide-only potential at $R_\beta$, the minimum of the sampled PMF. Small fluctuations in the blue schematic curve indicate stochastic MC sampling and do not represent measured uncertainty. The planar PB profiles begin at an effective diffuse/shear plane and illustrate the coverage-dependent continuum response. The model uses the PB boundary-potential difference rather than adding the two radial curves point by point. (B) MC inputs enter the surface grand potential without a return loop. Self-consistency is restricted to the feedback among coverage $\Gamma$, effective charge $\sigma_{\mathrm{eff}}$, and the PB charging term. Global minimization selects the stable solution.](../zeta/fig_lc_arpb_schematic.png)
 
@@ -559,9 +565,10 @@ screening of adsorption.
 We compare the $^{31}$P magic-angle-spinning (MAS) spectra and relaxation data with
 the simulations only qualitatively. The larger OB-induced line broadening and
 rotating-frame relaxation changes at pH 4 and 6 show a larger spectral and relaxation
-perturbation than at pH 10. The lack of a detectable cross-polarization (CP) signal argues against a
-dominant rigid phytate population. A minor rigid population below the detection limit
-remains possible.
+perturbation than at pH 10. This pH ordering matches the simulated PMFs, which are
+attractive at pH 4 and 6 and repulsive at pH 10. The lack of a detectable
+cross-polarization (CP) signal argues against a dominant rigid phytate population. A
+minor rigid population below the detection limit remains possible.
 
 We extracted no adsorbed fraction from $R_{1\rho}-R_1$. Because only one spin-lock
 field was measured, intrinsic transverse relaxation, exchange, and motional
