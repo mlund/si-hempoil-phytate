@@ -1,7 +1,7 @@
 [project]
 name = "si-hempoil-phytate"
 version = "0.1.0"
-description = "MC analysis of phytate near an oleosin peptide brush (Faunus), plus free-phytate hydrodynamic diffusion estimates."
+description = "MC and adsorption-regulated PB analysis of phytate near an oleosin peptide brush."
 requires-python = ">=3.12"
 dependencies = [
     # PMF / charge / potential / shape analysis (mc/extract_pmf.py, mc/extract_profiles.py)
@@ -11,10 +11,8 @@ dependencies = [
     "pyyaml>=6.0",
     "jupyterlab>=4.6",
     "ipykernel>=7.3",
-    # Free-phytate hydrodynamic diffusion (nmr/rotational_diffusion.py)
-    "rdkit>=2026.3",
-    "pygrpy>=0.1.5",
-    "scipy>=1.14", # runtime dependency of pygrpy (undeclared in its metadata)
+    # LC--AR--PB and ITC fitting
+    "scipy>=1.14",
     "xlrd>=2.0.2",
     "openpyxl>=3.1.5",
 ]
@@ -31,7 +29,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["zeta"]  # flat modules: import charge_regulation / mc_shared directly
+pythonpath = ["zeta", "itc"]  # flat analysis modules imported directly by tests
 
 [tool.ruff]
 line-length = 100

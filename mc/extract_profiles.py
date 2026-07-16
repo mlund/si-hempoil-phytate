@@ -10,19 +10,16 @@ decorated wall at z = -Lz/2; see the extract_pmf.py geometry).
 The ElectricPotentialProfile analyses (potential_all.csv, potential_peptide.csv)
 are written per window over the full slit; they are averaged over all windows.
 
-The MC RotateMolecule moves report a per-attempt mean-square angular displacement;
-pooled over the phytate protonation states this is a rough rotational-mobility
-proxy, giving D(r)/D0 ~ msd_rot(r) / msd_rot(bulk).
-
-The WidomRotation analysis adds a step-size-independent orientational measure: the
-mean Lipari-Szabo order parameter s2 (0 = freely tumbling, 1 = locked) and the
-orientation-averaged free energy widom_w [kJ/mol]. Older runs lacking the analysis
-leave these columns blank.
+The WidomRotation analysis adds step-size-independent equilibrium quantities: the
+ensemble second-rank orientational order s2 (0 = isotropic, 1 = perfectly aligned)
+and the conditional orientational-cage free energy widom_w [kJ/mol], referenced to
+the best trial orientation. These are static diagnostics, not correlation times or
+NMR relaxation rates. Older runs lacking the analysis leave these columns blank.
 
 The PolymerShape gyration tensor additionally yields s_wall = (3 Szz/Rg^2 - 1)/2,
 the P2 order parameter of the disk-like phytate's mass distribution about the wall
 normal z (0 isotropic, -1/2 face-on, +1 edge-on) -- a lab-frame *pose* diagnostic,
-distinct from the frame-independent NMR s2 (see wall_alignment).
+distinct from the P--O-proxy ensemble order s2 (see wall_alignment).
 
 The potential analysis also samples the charge density sigma(z). We estimate a
 zeta potential as the total potential at the hydrodynamic shear plane, taken at
@@ -30,17 +27,16 @@ the outer edge of the fixed brush charge (largest r where |sigma_peptide| exceed
 a small fraction of its peak). Magnitude is shear-plane dependent; the sign and
 pH-trend are the meaningful output.
 
-The DensityProfile analysis gives the brush monomer density rho_peptide(r), which sets the
-Zwanzig roughness profile used by zeta/mc_shared.py. It must come from the monomer density
-rather than sigma_peptide, which changes sign at the anchor (negative near the wall, positive
-through the brush) and is pH-dependent, whereas the roughness is structural. Older runs
-lacking the analysis leave the column blank.
+The DensityProfile analysis gives the brush monomer density rho_peptide(r), retained as
+a structural profile. It comes from the monomer density rather than sigma_peptide,
+which changes sign at the anchor and depends on pH. Older runs lacking the analysis
+leave the column blank.
 
-Writes three tidy CSVs for pandas.read_csv. The three per-window observables (phytate
-and peptide charge, rotational MSD, and the gyration-tensor shape) all live on the same
+Writes three tidy CSVs for pandas.read_csv. The per-window charge, Widom, and
+gyration-tensor observables all live on the same
 window-centre r-grid, so they are merged into one wide table:
   window_profiles.csv    pH, ionic_strength, r, q_ino, q_ino_err, q_peptide,
-                         q_peptide_err, msd_rot, s2, s2_err, widom_w, s_wall,
+                         q_peptide_err, s2, s2_err, widom_w, s_wall,
                          <shape descriptors...>
   potential_profiles.csv pH, ionic_strength, r, potential_all_mV, potential_peptide_mV,
                          sigma_peptide_e_A2, rho_peptide_A3  (full-slit profile, own r-grid)
@@ -107,34 +103,12 @@ def window_index(path: Path) -> int:
     return int(re.search(r"window(\d+)", str(path)).group(1))
 
 
-def rotation_msd(doc) -> float:
-    """Pooled mean-square angular displacement per attempted phytate rotation.
-
-    The tag-stripping loader discards the move type, so a phytate RotateMolecule is
-    identified as a non-peptide molecule move without a `directions` key (its
-    TranslateMolecule has `directions: z`). Summing accepted <Δθ²> over every
-    protonation state's rotation move and dividing by the (position-independent)
-    total attempts gives a consistent MC rotational-mobility proxy across windows.
-    """
-    total_sq = 0.0
-    total_n = 0
-    for collection in doc["propagate"]["collections"]:
-        for move in collection.get("moves", []):
-            mol = move.get("molecule")
-            if mol is None or mol == "peptide" or "directions" in move:
-                continue
-            msd = move["statistics"]["mean_square_displacement"]
-            total_sq += msd["avg"] * msd["n"]
-            total_n += msd["n"]
-    return total_sq / total_n if total_n else float("nan")
-
-
 def wall_alignment(shape) -> float | str:
     """P2 order parameter of the disk-like phytate's gyration tensor about the wall
     normal z: s_wall = (3 Szz/Rg^2 - 1)/2, with Rg^2 = Sxx + Syy + Szz.
 
     0 = isotropic; -1/2 = face-on (disk plane parallel to the wall); +1 = edge-on.
-    A lab-frame *pose* diagnostic, distinct from the frame-independent NMR s2.
+    A lab-frame *pose* diagnostic, distinct from the P--O-proxy ensemble s2.
     Returns "" when the gyration-tensor columns are absent (shapeless window).
     """
     try:
@@ -146,7 +120,7 @@ def wall_alignment(shape) -> float | str:
 
 
 def parse_window(output_yaml: Path):
-    """Return (z, charges, shape_dict, rot_msd, widom) for one window.
+    """Return (z, charges, shape_dict, widom) for one window.
 
     `charges` is a list of (selection, charge, err); `widom` is the tuple
     (s2, s2_err, widom_w) from the WidomRotation analysis, or (None, None, None)
@@ -172,7 +146,7 @@ def parse_window(output_yaml: Path):
             shape = {k: v for k, v in val.items() if k != "num_samples"}
         elif key == "widomrotation":
             widom = (val["mean_S2"]["mean"], val["mean_S2"]["error"], val["W/kJ/mol"]["mean"])
-    return z, charges, shape, rotation_msd(doc), widom
+    return z, charges, shape, widom
 
 
 def mean_profile(profile_csvs, cols) -> tuple:
@@ -261,8 +235,8 @@ def main() -> None:
         r_shear, zeta = shear_zeta(r_prof, sigma_peptide, pot_all, half_lz)
         zeta_rows.append([ph, ionic, r_shear, zeta])
 
-        # Per-window observables (charge, shape, rotational MSD) share the window-centre
-        # r-grid, so each window yields one merged row.
+        # Per-window observables share the window-centre r-grid, so each window yields
+        # one merged row.
         windows = sorted(
             [
                 *run.glob("umbrella_states/window*/output.yaml"),  # nested layout (current)
@@ -271,7 +245,7 @@ def main() -> None:
             key=window_index,
         )
         for win in windows:
-            z, charges, shape, msd, (s2, s2_err, widom_w) = parse_window(win)
+            z, charges, shape, (s2, s2_err, widom_w) = parse_window(win)
             if z is None:
                 continue
             r = z + half_lz
@@ -297,7 +271,6 @@ def main() -> None:
                     q.get("q_ino_err", ""),
                     q["q_peptide"],
                     q.get("q_peptide_err", ""),
-                    msd,
                     "" if s2 is None else s2,
                     "" if s2_err is None else s2_err,
                     "" if widom_w is None else widom_w,
@@ -312,7 +285,7 @@ def main() -> None:
 
     shape_fields = shape_fields or []
     with open(args.window, "w", newline="") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(
             [
                 "pH",
@@ -322,7 +295,6 @@ def main() -> None:
                 "q_ino_err",
                 "q_peptide",
                 "q_peptide_err",
-                "msd_rot",
                 "s2",
                 "s2_err",
                 "widom_w",
@@ -335,7 +307,7 @@ def main() -> None:
     print(f"Saved {args.window} ({len(window_rows)} rows)")
 
     with open(args.potential, "w", newline="") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(
             [
                 "pH",
@@ -351,7 +323,7 @@ def main() -> None:
     print(f"Saved {args.potential} ({len(potential_rows)} rows)")
 
     with open(args.zeta, "w", newline="") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(["pH", "ionic_strength", "r_shear", "zeta_mV"])
         w.writerows(zeta_rows)
     print(f"Saved {args.zeta} ({len(zeta_rows)} rows)")

@@ -2,9 +2,9 @@
 """Fit the phytate-into-OB ITC titrations (NanoAnalyze heats from extract_thermograms).
 
 The one-site (independent / Wiseman) model reproduces NanoAnalyze's Ka, n, dH as a
-validation of the pipeline. The charge-regulated isotherm is fitted in
-``zeta/charge_regulation.py``, which reuses this titration engine and the
-``_bound_from_isotherm`` helper below.
+validation of the pipeline. ``fit_lateral_arpb.py`` reuses this titration engine for
+the LC-AR-PB surface fit. ``_bound_from_isotherm`` remains as a generic bridge for
+callers that supply a tabulated coverage isotherm.
 
 The dilution-corrected titration injects dv into the fixed cell volume V0, diluting the
 cell content and overflowing the excess (MicroCal/Origin displacement heat).
@@ -95,8 +95,7 @@ def _bound_from_isotherm(titr, area, grid, cov):
     """Bound phytate [M] per injection from a tabulated coverage isotherm.
 
     ``grid`` (free-PA concentrations) and ``cov`` (areal coverage) define the isotherm;
-    ``zeta/charge_regulation.py`` builds them from the CR-PB state and reuses this to
-    turn coverage into a per-injection heat.
+    the result turns that coverage into a per-injection heat after ligand mass balance.
     """
     log_grid = np.log(grid)
 

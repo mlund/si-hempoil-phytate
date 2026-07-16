@@ -49,11 +49,11 @@ def plot_composite(ionic: float, path: Path) -> None:
         axA.plot(p.r, p.pmf_kT, color=c, label=f"pH {pH:g}")
 
         m = _sel(win, ionic, pH)
-        # Frame-independent P-O bond order parameter -- the NMR-relevant restriction.
+        # Equilibrium ensemble order of the P--O proxy vectors.  This is a static
+        # orientational diagnostic, not a rotational correlation time or an NMR rate.
         if "s2" in m:
             axB.plot(m.r, pd.to_numeric(m.s2, errors="coerce"), color=c, lw=1.2)
-        # Lab-frame disk pose (face-on/edge-on) -- a structural diagnostic, NOT the NMR
-        # quantity; dashed so it is never confused with S^2.
+        # Lab-frame disk pose (face-on/edge-on), shown as a separate structural diagnostic.
         if "s_wall" in m:
             axB_pose.plot(m.r, pd.to_numeric(m.s_wall, errors="coerce"), color=c, ls="--", lw=1.0)
 
@@ -77,13 +77,13 @@ def plot_composite(ionic: float, path: Path) -> None:
 
     axA.axhline(0, color="gray", ls="--", lw=0.5)
     axA.set_ylabel(r"PMF ($k_\mathrm{B}T$)")
-    axB.set_ylabel(r"$S^2$  (P–O bond, NMR)")
+    axB.set_ylabel(r"$S^2_{\mathrm{ens}}$  (P–O proxy)")
     axB.set_ylim(bottom=0)
     axB_pose.set_ylabel(r"$S_\mathrm{wall}$  (disk pose)")
     axB_pose.axhline(0, color="gray", ls=":", lw=0.5)  # isotropic-pose reference
     axB.legend(
         handles=[
-            Line2D([], [], color="gray", ls="-", label=r"$S^2$ (bond)"),
+            Line2D([], [], color="gray", ls="-", label=r"$S^2_{\rm ens}$ (P–O proxy)"),
             Line2D([], [], color="gray", ls="--", label=r"$S_\mathrm{wall}$ (pose)"),
         ],
         frameon=False,

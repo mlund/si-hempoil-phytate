@@ -1,6 +1,6 @@
 # Supporting Information for Hempoil-Phytate Interactions: Theory and Simulations
 
-Reproducibility repository for the simulation, charge-regulation, NMR,
+Reproducibility repository for the simulation, adsorption-regulated PB,
 zeta-potential, and ITC analyses used in the oil-body/phytate manuscript.
 
 The large raw Faunus output is expected under `mc/runs/` and is not needed for the
@@ -21,14 +21,12 @@ uv run writeup/build.py
 `make_figures.py` is the main reproduction target. It rebuilds:
 
 - `zeta/measured_zeta.csv` from `zeta/Zeta_potential_tidied.xlsx`
-- `nmr/free_phytate_diffusion.csv`
 - `mc/composite_I0.005.png`, `mc/composite_I0.03.png`, and
   `mc/composite_I0.15.png`
-- `zeta/fig_crpb.png`
-- `itc/fig_itc_crpb.png`
+- `zeta/fig_lateral_arpb.png`
+- `itc/fig_itc_lateral_arpb.png`
 
-It also prints the reported tables to stdout: NMR binding fractions, zeta model
-parameters, and ITC fit parameters.
+It also prints the zeta-model and ITC fit parameters.
 
 To rebuild the tracked CSV layer from raw MC output, obtain `mc/runs/` separately
 and run this first:
@@ -62,20 +60,23 @@ peptide-brush wall.
 - `mc/`: Faunus inputs, run generation, PMF/profile extraction, tracked MC CSVs,
   and composite MC figures. `mc/runs/` holds large raw outputs and is git-ignored.
 - `zeta/`: measured zeta-potential data, workbook parser, shared MC utilities, and
-  the charge-regulated Poisson-Boltzmann model.
-- `nmr/`: PMF-to-bound-fraction calculation and free-phytate hydrodynamic
-  diffusion estimate.
+  the LC–AR-PB model.
 - `itc/`: raw NanoAnalyze ITC exports, thermogram extraction, and one-site
   thermogram fitting.
 - `writeup/`: manuscript/SI support text and the `pandoc` build script for Word
   and ODF output.
-  `extract_csvs.py` for rebuilding the MC CSV layer, and `pyproject.toml` /
-  `uv.lock` for the Python environment.
+- `extract_csvs.py` and `make_figures.py`: top-level reproduction drivers.
+- `pyproject.toml` and `uv.lock`: Python environment.
 
 ## Development
 
 ```bash
-uv run pytest        # CR-PB sanity/unit + regression tests (tests/)
+uv run pytest        # physics invariants and regression tests
 uv run ruff check .
 uv run ruff format .
+uv run clean.py      # remove figures, built documents, and transient caches
 ```
+
+The clean command preserves the tracked CSV analysis layer, raw simulation output,
+experimental workbooks, and archives. Use `uv run clean.py --dry-run` to inspect its
+cleanup set first.
