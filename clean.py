@@ -17,6 +17,7 @@ GENERATED_FILES = (
     "mc/composite_I0.005.png",
     "mc/composite_I0.03.png",
     "mc/composite_I0.15.png",
+    "zeta/fig_lc_arpb_schematic.png",
     "zeta/fig_lateral_arpb.png",
     "itc/fig_itc_lateral_arpb.png",
     "writeup/sim_for_mauricio.docx",

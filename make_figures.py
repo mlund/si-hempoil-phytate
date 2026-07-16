@@ -5,6 +5,7 @@ Needs only the committed CSVs and experimental workbooks, not ``mc/runs/``. Prod
 
   zeta/measured_zeta.csv           measured zeta, parsed from the workbook
   mc/composite_I{0.005,0.03,0.15}.png   MC composites (main-text + SI figures)
+  zeta/fig_lc_arpb_schematic.png LC--AR--PB coupling schematic     (Fig S2)
   zeta/fig_lateral_arpb.png        zeta vs [PA]/[NaCl]           (Fig, Table S-3a)
   itc/fig_itc_lateral_arpb.png     pH-4 thermogram fit           (Fig, Table S-6)
 
@@ -30,6 +31,7 @@ def _run(rel: str) -> None:
 if __name__ == "__main__":
     _run("zeta/parse_zeta_workbook.py")  # -> zeta/measured_zeta.csv
     _run("mc/plot_composites.py")  # -> mc/composite_I*.png
+    _run("zeta/plot_lc_arpb_schematic.py")  # -> zeta/fig_lc_arpb_schematic.png
     _run("zeta/lateral_arpb.py")  # -> zeta/fig_lateral_arpb.png + Table S-3a
     _run("itc/fit_lateral_arpb.py")  # -> itc/fig_itc_lateral_arpb.png + Table S-6
     print("\nAll figures and tables regenerated.")

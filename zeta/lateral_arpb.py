@@ -276,7 +276,7 @@ class State:
     theta: float
     sigma_eff: float
     zeta: float
-    psi_beta: float
+    psi_binding_effective: float
     valence: float
     beta_mu_corr: float
 
@@ -311,14 +311,14 @@ def lateral_state(
     bare = sigma0(pH)
     sigma_eff = bare - z * gamma
     delta_psi = _psi_d(sigma_eff, ionic) - _psi_d(bare, ionic)
-    psi_beta = peptide_potential(pH, ionic) + delta_psi
+    psi_binding_effective = peptide_potential(pH, ionic) + delta_psi
     beta_mu_corr = _correlation_chemical_potential(gamma, ionic, z) if include_correlations else 0.0
     return State(
         gamma=gamma,
         theta=gamma / gamma_max,
         sigma_eff=sigma_eff,
         zeta=_psi_d(sigma_eff, ionic),
-        psi_beta=psi_beta,
+        psi_binding_effective=psi_binding_effective,
         valence=z,
         beta_mu_corr=beta_mu_corr,
     )

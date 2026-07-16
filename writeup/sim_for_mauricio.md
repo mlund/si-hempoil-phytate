@@ -278,6 +278,15 @@ The model represents the oil-body surface as a planar Gouy–Chapman diffuse lay
 1:1 electrolyte. It separates the local peptide field acting on one phytate at the
 brush edge from the collective diffuse-layer response to adsorbed charge.
 
+The molecular coupling is one-way: MC supplies a fixed local peptide field and a
+fixed phytate valence to the continuum model, but the continuum model does not update
+the MC simulation. Self-consistency refers instead to the surface problem. For each
+trial coverage, PB calculates the charging free energy from the corresponding
+effective surface charge; that free energy changes the equilibrium coverage. We solve
+this feedback by minimizing one surface grand potential globally (Figure S2).
+
+![Figure S2. LC–AR-PB construction. Blue denotes fixed MC input, purple experimental and prescribed surface inputs, grey the bare PB state, and red the coverage-dependent PB response. (A) The one-phytate MC calculation supplies the peptide-only potential at $R_\beta$, the minimum of the sampled PMF. Small fluctuations in the blue schematic curve indicate stochastic MC sampling and do not represent measured uncertainty. The planar PB profiles begin at an effective diffuse/shear plane and illustrate the coverage-dependent continuum response. The model uses the PB boundary-potential difference rather than adding the two radial curves point by point. (B) MC inputs enter the surface grand potential without a return loop. Self-consistency is restricted to the feedback among coverage $\Gamma$, effective charge $\sigma_{\mathrm{eff}}$, and the PB charging term. Global minimization selects the stable solution.](../zeta/fig_lc_arpb_schematic.png)
+
 ### S-2.1. MC input and stated one-particle approximation
 
 We defined the binding coordinate as $R_\beta=26$ Å from the grafting wall. The
@@ -305,6 +314,7 @@ $$
 \sigma=\frac{\kappa}{2\pi l_B}\sinh\!\left(\frac{y_d}{2}\right),
 \qquad
 y_d(\sigma)=2\,\operatorname{asinh}\!\left(\frac{2\pi l_B\sigma}{\kappa}\right),
+\qquad\text{(S1)}
 $$
 
 where $l_B$ is the Bjerrum length and $\kappa$ is the inverse Debye length. For an
@@ -314,11 +324,29 @@ $$
 \sigma_{\mathrm{eff}}=\sigma_0-z\Gamma,
 \qquad
 \zeta=\frac{k_BT}{e}\,y_d(\sigma_{\mathrm{eff}}).
+\qquad\text{(S2)}
 $$
 
 Adsorption thus changes both the effective surface charge and the diffuse-layer
 potential. This coupling is the adsorption-regulated boundary condition (Trefalt et
-al., 2016).
+al., 2016). The mapping equates the Gouy–Chapman boundary potential with the measured
+$\zeta$-potential; it does not calculate a hydrodynamic offset between the PB plane
+and the shear plane.
+
+To distinguish the two electrostatic inputs, we define the incremental diffuse-layer
+response and the effective binding-plane potential as
+
+$$
+\Delta y_d(\Gamma)=y_d(\sigma_{\mathrm{eff}})-y_d(\sigma_0),
+\qquad
+y_\beta(\Gamma)=y_{\mathrm{pep}}^{MC}(R_\beta)+\Delta y_d(\Gamma).
+\qquad\text{(S3)}
+$$
+
+Thus, $\psi_\beta=(k_BT/e)y_\beta$ is not the one-phytate MC potential alone. It is
+the fixed local MC field plus the change in the continuum potential caused by
+adsorption. The subtraction of the bare PB potential also prevents the measured
+bare-surface monopole field from being added twice.
 
 We obtained the coverage by minimizing one surface grand potential, which avoids
 applying sequential electrostatic corrections. Let
@@ -334,6 +362,7 @@ $$
 -z\,y_{\mathrm{pep}}^{MC}(R_\beta)\Gamma
 +g_{\mathrm{PB}}(\Gamma)
 +\beta f_{\mathrm{corr,res}}(\Gamma).
+\qquad\text{(S4)}
 $$
 
 The five terms describe Langmuir mixing and site exclusion, intrinsic adsorption,
@@ -347,6 +376,7 @@ g_{\mathrm{PB}}(\Gamma)
 -y_d(\sigma_0)(\sigma_{\mathrm{eff}}-\sigma_0),
 \qquad
 \frac{\partial F_{\mathrm{PB}}}{\partial\sigma}=y_d(\sigma).
+\qquad\text{(S5)}
 $$
 
 For the planar Grahame relation, the corresponding primitive is
@@ -358,6 +388,7 @@ F_{\mathrm{PB}}(\sigma)
 -\frac{\sqrt{1+(a\sigma)^2}}{a}
 \right],
 \qquad a=\frac{2\pi l_B}{\kappa}.
+\qquad\text{(S6)}
 $$
 
 Differentiation with respect to coverage gives
@@ -365,12 +396,33 @@ Differentiation with respect to coverage gives
 $$
 \frac{\partial g_{\mathrm{PB}}}{\partial\Gamma}
 =-z\,[y_d(\sigma_{\mathrm{eff}})-y_d(\sigma_0)].
+\qquad\text{(S7)}
 $$
 
 Thus, the same nonlinear PB response determines the adsorption equilibrium and the
 reported $\zeta$-potential. Subtracting the bare-state tangent prevents the monopole
 field inferred from the measured bare $\zeta$ from being added again to the
 peptide-only MC binding field.
+
+The stationarity condition makes the feedback explicit. If
+$\beta\mu_{\mathrm{corr,res}}=\partial(\beta f_{\mathrm{corr,res}})/\partial\Gamma$,
+then an interior equilibrium obeys
+
+$$
+\frac{\theta}{1-\theta}
+=Kc_L\exp\!\left\{
+z\left[y_{\mathrm{pep}}^{MC}(R_\beta)+\Delta y_d(\Gamma)\right]
+-\beta\mu_{\mathrm{corr,res}}(\Gamma)
+\right\}.
+\qquad\text{(S8)}
+$$
+
+Equation (S8) could be solved by fixed-point iteration: a trial $\Gamma$ determines
+$\sigma_{\mathrm{eff}}$ and $\Delta y_d$, which update the adsorption probability.
+The implementation instead minimizes Equation (S4) globally because the lateral
+closure can produce more than one stationary branch. This procedure retains the MC
+field in every free-energy evaluation while selecting the thermodynamically stable
+coverage.
 
 ### S-2.3. PB-matched lateral correlation free energy
 
@@ -383,6 +435,7 @@ $$
 \beta f_{\mathrm{corr,res}}(\Gamma)
 =\frac{\Gamma^2}{2}
 \left[J_{\mathrm{F}}(\Gamma)-J_{\mathrm{Y,MF}}\right].
+\qquad\text{(S9)}
 $$
 
 The hard-core Yukawa mean-field reference is
@@ -392,6 +445,7 @@ J_{\mathrm{Y,MF}}=\int_{D_{\mathrm{PA}}}^\infty 2\pi r\,
 u_Y(r)\,dr,
 \qquad
 u_Y(r)=z^2l_B\frac{e^{-\kappa r}}{r}.
+\qquad\text{(S10)}
 $$
 
 Here, $D_{\mathrm{PA}}=10.6$ Å is the phytate hard-core diameter. To obtain
@@ -407,6 +461,7 @@ u_Y(r), & r\ge R_c,
 \qquad
 J_{\mathrm{F}}=\int_{D_{\mathrm{PA}}}^{\infty}2\pi r\,
 u_{\mathrm{F}}(r;\Gamma)\,dr.
+\qquad\text{(S11)}
 $$
 
 The cutoff depends on the solved coverage:
@@ -416,6 +471,7 @@ R_c(\Gamma)=\max\!\left[
 D_{\mathrm{PA}},
 \min\!\left(\frac{2}{\kappa},\frac{1}{\sqrt{\pi\Gamma}}\right)
 \right].
+\qquad\text{(S12)}
 $$
 
 The cutoff cannot fall below the phytate core. At low coverage it is capped at two

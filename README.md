@@ -23,6 +23,7 @@ uv run writeup/build.py
 - `zeta/measured_zeta.csv` from `zeta/Zeta_potential_tidied.xlsx`
 - `mc/composite_I0.005.png`, `mc/composite_I0.03.png`, and
   `mc/composite_I0.15.png`
+- `zeta/fig_lc_arpb_schematic.png`
 - `zeta/fig_lateral_arpb.png`
 - `itc/fig_itc_lateral_arpb.png`
 

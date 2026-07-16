@@ -60,6 +60,17 @@ def test_coverage_is_bounded_and_lowers_surface_charge():
     assert state.sigma_eff == pytest.approx(lc.sigma0(4.0) - state.valence * state.gamma)
 
 
+def test_effective_binding_potential_adds_only_incremental_pb_response():
+    pH, ionic = 4.0, 0.005
+    state = lc.lateral_state(pH, ionic, 5e-6, K=100.0)
+    expected = (
+        lc.peptide_potential(pH, ionic)
+        + lc._psi_d(state.sigma_eff, ionic)
+        - lc._psi_d(lc.sigma0(pH), ionic)
+    )
+    assert state.psi_binding_effective == pytest.approx(expected)
+
+
 def test_finite_activity_has_nonzero_interior_coverage():
     state = lc.lateral_state(6.0, 0.005, 1.5e-7, K=50.0)
     assert 0.0 < state.gamma < lc.GAMMA_MAX
