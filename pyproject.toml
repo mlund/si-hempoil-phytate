@@ -9,7 +9,7 @@ dependencies = [
     "pandas>=3.0",
     "matplotlib>=3.11",
     "pyyaml>=6.0",
-    "jupyterlab>=4.6",
+    "jupyterlab>=4.6.2",
     "ipykernel>=7.3",
     # LC--AR--PB and ITC fitting
     "scipy>=1.14",
