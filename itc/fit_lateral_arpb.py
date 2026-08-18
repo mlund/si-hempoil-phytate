@@ -201,11 +201,12 @@ def fit_lateral_arpb(
     (K, area, dH) coordinates.
     """
     isotherm = build_isotherm(titration.pH, ionic, include_correlations)
+    mask = titration.fit_mask
 
     def residual(parameters: np.ndarray) -> np.ndarray:
         log_K, log_area, dH = parameters
         predicted = model_heat(titration, isotherm, 10.0**log_K, 10.0**log_area, dH)
-        return predicted - titration.heat_uJ
+        return (predicted - titration.heat_uJ)[mask]
 
     solution = least_squares(
         residual,
@@ -225,7 +226,7 @@ def fit_lateral_arpb(
     K, area = 10.0**log_K, 10.0**log_area
     predicted = model_heat(titration, isotherm, K, area, dH)
     bound, free = bound_profile(titration, isotherm, K, area)
-    residual_at_solution = predicted - titration.heat_uJ
+    residual_at_solution = (predicted - titration.heat_uJ)[mask]
     covariance_log = _covariance_from_jacobian(solution.jac, residual_at_solution)
 
     # Local delta-method transformation from (log10 K, log10 A, dH) to physical units.
@@ -273,15 +274,27 @@ def plot_fit(
     )
 
     label = "LC–AR-PB" if include_correlations else "AR-PB (no residual correlations)"
+    mask = titration.fit_mask
     fig, axis = plt.subplots(figsize=(7, 5))
     axis.plot(
-        titration.mole_ratio,
-        titration.heat_uJ,
+        titration.mole_ratio[mask],
+        titration.heat_uJ[mask],
         "o",
         color="#333333",
         ms=5,
         label=f"experiment ({titration.source})",
     )
+    # Show the excluded injection rather than hiding it, so the reader can judge it.
+    if not np.all(mask):
+        axis.plot(
+            titration.mole_ratio[~mask],
+            titration.heat_uJ[~mask],
+            "o",
+            mfc="none",
+            color="#333333",
+            ms=5,
+            label="first injection (excluded)",
+        )
     axis.plot(
         titration.mole_ratio,
         fit.predicted_heat_uJ,
@@ -323,7 +336,8 @@ def _print_fit(
         f"({AREA_OLEOSIN:.0f} A^2/oleosin)"
     )
     print(f"  dH   = {fit.dH_kJ_mol:.5g} +/- {errors[2]:.2g} kJ/mol")
-    print(f"  RMS  = {fit.rms_uJ:.3g} uJ")
+    fitted = int(np.count_nonzero(titration.fit_mask))
+    print(f"  RMS  = {fit.rms_uJ:.3g} uJ over {fitted}/{titration.heat_uJ.size} injections")
     print(f"  optimizer: {'converged' if fit.success else 'failed'} ({fit.message})")
     print("  parameter correlation matrix (K, area, dH):")
     for row in fit.correlation:

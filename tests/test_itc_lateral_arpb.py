@@ -1,5 +1,7 @@
 """Mass-balance and fit checks for the LC-AR-PB ITC bridge."""
 
+import dataclasses
+
 import extract_thermograms as itc_data
 import fit_lateral_arpb as fit_lc
 import fit_thermogram as itc_fit
@@ -52,3 +54,42 @@ def test_fit_converges_and_reproduces_thermogram():
     assert result.dH_kJ_mol < 0.0
     assert result.rms_uJ < 10.0
     assert np.all(np.isfinite(result.correlation))
+
+
+def test_first_injection_is_excluded_from_residuals_but_still_dilutes_the_cell():
+    titration = itc_data.load(4.0)
+    mask = titration.fit_mask
+    assert not mask[0]
+    assert np.all(mask[itc_data.SKIP_INJECTIONS :])
+
+    # The skipped injection still delivers phytate, so the cell composition at every
+    # later injection must reflect it.  Check the second injection against the
+    # two-step overflow balance written out by hand.
+    oleosin, ligand_total = itc_fit._dilute(titration)
+    volume = titration.vcell_uL * 1e-6
+    first, second = titration.vinj_uL[:2] * 1e-6
+    after_first = titration.csyr_M * first / (volume + first)
+    after_second = (after_first * volume + titration.csyr_M * second) / (volume + second)
+    assert ligand_total[1] == pytest.approx(after_second, rel=1e-12)
+
+    # Had the first injection not happened, less phytate would be present.
+    alone = titration.csyr_M * second / (volume + second)
+    assert ligand_total[1] > alone
+    assert np.all(np.diff(oleosin) < 0.0)
+
+
+def test_fit_ignores_a_corrupted_first_injection_heat():
+    titration = itc_data.load(4.0)
+    corrupted = dataclasses.replace(titration, heat_uJ=titration.heat_uJ.copy())
+    corrupted.heat_uJ[0] += 1000.0
+    assert itc_fit.fit_onesite(corrupted) == pytest.approx(itc_fit.fit_onesite(titration))
+
+
+def test_onesite_reproduces_nanoanalyze_fit():
+    """Dropping the first injection matches NanoAnalyze's own independent-model fit."""
+    titration = itc_data.load(4.0)
+    Ka, dH, n, _rms = itc_fit.fit_onesite(titration)
+    reference = titration.na_fit
+    assert Ka == pytest.approx(reference["Ka"], rel=0.05)
+    assert n == pytest.approx(reference["n"], rel=0.05)
+    assert dH == pytest.approx(reference["dH"], rel=0.05)

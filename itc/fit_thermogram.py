@@ -59,29 +59,33 @@ def onesite_heat(titr, Ka, dH_kJ, n):
     return _heat_uJ(titr, onesite_bound(m_t, l_t, Ka, n), dH_kJ)
 
 
-def fit_onesite(titr: itc_data.Titration):
-    """Independent-model fit; returns (Ka, dH_kJ, n, rms_uJ)."""
-    popt, _ = curve_fit(
-        lambda x, Ka, dH, n: onesite_heat(titr, Ka, dH, n),
-        titr.mole_ratio,
-        titr.heat_uJ,
+def _fit_onesite_pcov(titr: itc_data.Titration):
+    """Least-squares core of the one-site fit; returns (popt=(Ka,dH,n), pcov).
+
+    Skipped injections are removed from the residual only. The heat model still sees the
+    whole titration, so their dilution and bound-complex history stay in the mass balance.
+    """
+    mask = titr.fit_mask
+    return curve_fit(
+        lambda x, Ka, dH, n: onesite_heat(titr, Ka, dH, n)[mask],
+        titr.mole_ratio[mask],
+        titr.heat_uJ[mask],
         p0=[2e5, -50.0, 0.33],
         maxfev=200000,
     )
-    rms = float(np.sqrt(np.mean((titr.heat_uJ - onesite_heat(titr, *popt)) ** 2)))
-    return (*popt, rms)
+
+
+def fit_onesite(titr: itc_data.Titration):
+    """Independent-model fit; returns (Ka, dH_kJ, n, rms_uJ)."""
+    popt, _pcov = _fit_onesite_pcov(titr)
+    mask = titr.fit_mask
+    residual = (titr.heat_uJ - onesite_heat(titr, *popt))[mask]
+    return (*popt, float(np.sqrt(np.mean(residual**2))))
 
 
 def fit_onesite_pcov(titr: itc_data.Titration):
     """One-site fit returning (popt=(Ka,dH,n), pcov) for parameter-correlation analysis."""
-    popt, pcov = curve_fit(
-        lambda x, Ka, dH, n: onesite_heat(titr, Ka, dH, n),
-        titr.mole_ratio,
-        titr.heat_uJ,
-        p0=[2e5, -50.0, 0.33],
-        maxfev=200000,
-    )
-    return popt, pcov
+    return _fit_onesite_pcov(titr)
 
 
 def corr_from_cov(pcov: np.ndarray) -> np.ndarray:

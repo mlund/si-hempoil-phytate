@@ -35,6 +35,13 @@ PA_SYRINGE_M = 0.30e-3
 OLEOSIN_M = 47.8e-6
 VCELL_UL = 1200.0  # active cell volume (all files agree)
 
+# The first injection is not a titration point: the syringe tip exchanges with the cell
+# while the instrument equilibrates, and it is a smaller priming injection (5.1 vs 8 uL
+# at pH 4), so its heat is diluted by an unknown amount of pre-delivered phytate. It is
+# dropped from every fit residual but kept in the cumulative dilution and mass balance,
+# because the phytate it delivers is in the cell for all later injections.
+SKIP_INJECTIONS = 1
+
 # The .xls export whose NanoAnalyze fit the manuscript reports (only pH 4 was fitted).
 REPORTED = {4.0: "pH4/pH4_rep3.xls"}
 
@@ -69,6 +76,13 @@ class Titration:
     def mt0(self) -> float:
         """Initial oleosin concentration in the cell [M]."""
         return self.moles_cell / (self.vcell_uL * 1e-6)
+
+    @property
+    def fit_mask(self) -> np.ndarray:
+        """Injections whose heat enters a fit residual (see ``SKIP_INJECTIONS``)."""
+        mask = np.ones(len(self.heat_uJ), dtype=bool)
+        mask[:SKIP_INJECTIONS] = False
+        return mask
 
 
 def _header_row(df: pd.DataFrame) -> int:

@@ -108,10 +108,10 @@ cross-polarization signal argues against a dominant rigid phytate population.
 
 The calorimetry tests whether monolayer adsorption can account for the measured heat.
 The one-site instrument model and the unconstrained LC–AR-PB surface fit describe the pH-4
-thermogram with root-mean-square (RMS) residuals of 5.9 and 6.6 µJ, respectively
-(Supplementary Section S-6). The one-site model gives $0.38$ phytate per oleosin.
-LC–AR-PB reaches a similar maximum of $0.44$ only by fitting
-$6.99\times10^3$ Å² per oleosin, 21 times the
+thermogram with root-mean-square (RMS) residuals of 5.2 and 6.1 µJ, respectively
+(Supplementary Section S-6). The one-site model gives $0.34$ phytate per oleosin.
+LC–AR-PB reaches a similar maximum of $0.41$ only by fitting
+$7.40\times10^3$ Å² per oleosin, 22 times the
 physical grafting area. At the physical area of 338 Å², LC–AR-PB gives
 $0.02$–$0.03$ phytate per oleosin, consistent with the scale inferred from
 $\zeta$-potential. Thus, the LC–AR-PB curve fit does not support a physical monolayer
@@ -583,7 +583,10 @@ or simulations of the relevant orientational time-correlation functions.
 
 We fitted the pH-4 thermogram with two models. First, we refitted the one-site model
 used in the instrument analysis to the extracted injection heats, including the cell
-overflow correction. We then fitted LC–AR-PB as a surface isotherm with three free
+overflow correction. Both fits excluded the first injection, whose heat is unreliable
+because the syringe tip exchanges with the cell during thermal equilibration and
+because it was a smaller priming injection (5.1 against 8 µL). The phytate it
+delivered was retained in the dilution and mass balance of all later injections. We then fitted LC–AR-PB as a surface isotherm with three free
 parameters: intrinsic $K$, area $A_o$ per oleosin, and constant molar adsorption
 enthalpy $\Delta H$. This diagnostic LC–AR-PB fit was independent of the
 $\zeta$-potential fit and did not constrain $K$ to the $\zeta$-derived value.
@@ -612,23 +615,24 @@ This heat model assigns one constant enthalpy to each net adsorption event. It d
 not resolve coverage-dependent electrostatic enthalpy, correlation enthalpy, or heat
 from aggregation.
 
-![pH-4 ITC thermogram: extracted injection heats (points), the unconstrained LC–AR-PB surface fit with residual lateral correlations (solid), and the independent one-site instrument model refitted with the same dilution correction (dashed).](../itc/fig_itc_lateral_arpb.png)
+![pH-4 ITC thermogram: extracted injection heats (filled points; the excluded first injection is open), the unconstrained LC–AR-PB surface fit with residual lateral correlations (solid), and the independent one-site instrument model refitted with the same dilution correction (dashed).](../itc/fig_itc_lateral_arpb.png)
 
 Both models described the thermogram with similar residuals (Table S-6). The one-site
 model gave
-$K_a=(2.5\pm0.8)\times10^5$ M⁻¹, $n=0.380\pm0.03$ phytate per oleosin and
-$\Delta H=-47\pm5$ kJ mol⁻¹, with RMS 5.9 µJ. LC–AR-PB gave
-$K=0.563\pm0.55$ M⁻¹, $A_o=(6.99\pm1.0)\times10^3$ Å² per oleosin and
-$\Delta H=-37.7\pm2.3$ kJ mol⁻¹, with RMS 6.57 µJ. The two affinity constants are
+$K_a=(1.9\pm0.5)\times10^5$ M⁻¹, $n=0.336\pm0.03$ phytate per oleosin and
+$\Delta H=-56\pm7$ kJ mol⁻¹, with RMS 5.2 µJ, reproducing the instrument fit
+($K_a=1.87\times10^5$ M⁻¹, $n=0.322$, $\Delta H=-56.4$ kJ mol⁻¹). LC–AR-PB gave
+$K=0.263\pm0.23$ M⁻¹, $A_o=(7.40\pm0.95)\times10^3$ Å² per oleosin and
+$\Delta H=-41.2\pm3.1$ kJ mol⁻¹, with RMS 6.1 µJ. The two affinity constants are
 not directly comparable. The one-site $K_a$ contains the complete apparent binding
 free energy. By contrast, LC–AR-PB represents the peptide field and PB response
 explicitly, leaving $K$ to describe the remaining intrinsic activity.
 
-The fitted LC–AR-PB area was 20.7 times the physical grafting area of 338 Å² per
-oleosin. Moreover, $K$ and area were strongly anticorrelated ($-0.93$). The inflated
-area allowed the fit to reach 0.435 bound phytate per oleosin, close to the one-site
-stoichiometry. Imposing the physical area reduced the endpoint to 0.022 phytate per
-oleosin, or 0.025 with the pH-4 $\zeta$-fitted $K$. These values match the
+The fitted LC–AR-PB area was 21.9 times the physical grafting area of 338 Å² per
+oleosin. Moreover, $K$ and area were strongly anticorrelated ($-0.90$). The inflated
+area allowed the fit to reach 0.405 bound phytate per oleosin, close to the one-site
+stoichiometry. Imposing the physical area reduced the endpoint to 0.020 phytate per
+oleosin, or 0.026 with the pH-4 $\zeta$-fitted $K$. These values match the
 $\sim0.03$ scale estimated from the $\zeta$-calibrated surface model. Thus, the LC–AR-PB
 curve fit absorbs the missing capacity into an unphysical area and does not establish
 a monolayer adsorption enthalpy.
@@ -644,13 +648,13 @@ uncertainty.
 
 | quantity | one-site instrument model | LC–AR-PB surface model |
 |----------|---------------------------|--------------------------|
-| affinity | $K_a=(2.5\pm0.8)\times10^5$ M⁻¹ | $K=0.563\pm0.55$ M⁻¹ |
-| capacity parameter | $n=0.380\pm0.03$ PA/oleosin | $A_o=(6.99\pm1.0)\times10^3$ Å²/oleosin |
-| maximum fitted bound amount | $\approx0.38$ PA/oleosin | 0.435 PA/oleosin |
-| $\Delta H$ | $-47\pm5$ kJ mol⁻¹ | $-37.7\pm2.3$ kJ mol⁻¹ |
-| largest $|$parameter correlation$|$ | 0.88 ($K_a$–$\Delta H$) | 0.93 ($K$–$A_o$; anticorrelated) |
-| RMS | 5.9 µJ | 6.57 µJ |
-| physical interpretation | apparent multiphasic stoichiometry | area is 20.7× the physical 338 Å² |
+| affinity | $K_a=(1.9\pm0.5)\times10^5$ M⁻¹ | $K=0.263\pm0.23$ M⁻¹ |
+| capacity parameter | $n=0.336\pm0.03$ PA/oleosin | $A_o=(7.40\pm0.95)\times10^3$ Å²/oleosin |
+| maximum fitted bound amount | $\approx0.34$ PA/oleosin | 0.405 PA/oleosin |
+| $\Delta H$ | $-56\pm7$ kJ mol⁻¹ | $-41.2\pm3.1$ kJ mol⁻¹ |
+| largest $|$parameter correlation$|$ | 0.93 ($n$–$\Delta H$) | 0.90 ($K$–$A_o$; anticorrelated) |
+| RMS | 5.2 µJ | 6.1 µJ |
+| physical interpretation | apparent multiphasic stoichiometry | area is 21.9× the physical 338 Å² |
 
 ---
 
