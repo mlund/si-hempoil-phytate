@@ -26,7 +26,7 @@ and charge regulation caused by neighbouring adsorbed phytates.  Langmuir site e
 is retained, so no additional hard-disk free energy is added.
 
 Run directly to fit K, print the predicted Figure S3 values, and write
-``fig_lateral_arpb.png``.
+``fig_lateral_arpb.png`` plus ``model_zeta.csv``.
 """
 
 from __future__ import annotations
@@ -38,6 +38,7 @@ from functools import cache
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from scipy.optimize import minimize_scalar
 from scipy.special import xlogy
 
@@ -53,6 +54,13 @@ PHS = gv.PHS
 
 # Geometric site ceiling for the Figure S3 LC--AR--PB calculation.
 GAMMA_MAX = 1.0 / 11.0**2  # PA / A^2
+
+# Scan definitions shared by the figure and the exported table, so the plotted curve and
+# the tabulated numbers cannot drift apart.
+PA_CURVE_MM = np.linspace(0.0, 7.7, 200)
+NACL_CURVE_MM = np.linspace(1.0, 100.0, 200)
+SALT_SCAN_PA_MM = 1.5  # fixed PA of the measured salt series
+I_BACKGROUND = 0.003  # buffer/counterion background on top of added NaCl [M]
 
 
 def _y_d(sigma: float | np.ndarray, ionic: float) -> float | np.ndarray:
@@ -372,11 +380,61 @@ def fit_K_by_pH(include_correlations: bool = True) -> dict[float, float]:
     return {pH: fit_K(pH, include_correlations) for pH in PHS}
 
 
-def plot_figure_s3(
+def scan_table(
     K_by_pH: dict[float, float],
-    output: Path,
     *,
     include_correlations: bool = True,
+) -> pd.DataFrame:
+    """Predicted zeta for both scans, on the plotted grid and at the measured points.
+
+    ``sampling`` separates the dense curve used for the figure from the rows that line up
+    with measurements, so one file serves both the plot and the SI table.
+    """
+    rows = []
+
+    def add(scan: str, sampling: str, pH: float, pa_mM: float, nacl_mM: float) -> None:
+        ionic = I_ANCHOR if scan == "PA" else nacl_mM / 1000.0 + I_BACKGROUND
+        state = lateral_state(
+            pH,
+            ionic,
+            pa_mM * 1e-3 / DILUTION,
+            K_by_pH[pH],
+            include_correlations=include_correlations,
+        )
+        rows.append(
+            {
+                "scan": scan,
+                "sampling": sampling,
+                "pH": pH,
+                "PA_mM": pa_mM,
+                "NaCl_mM": nacl_mM,
+                "ionic_M": ionic,
+                "K_per_M": K_by_pH[pH],
+                "z_MC": state.valence,
+                "gamma_per_A2": state.gamma,
+                "theta": state.theta,
+                "sigma_eff_e_per_A2": state.sigma_eff,
+                "beta_mu_corr": state.beta_mu_corr,
+                "zeta_mV": state.zeta,
+            }
+        )
+
+    for pH in PHS:
+        for pa_mM in PA_CURVE_MM:
+            add("PA", "curve", pH, float(pa_mM), 0.0)
+        for pa_mM in gv._fig6a(pH)[0]:
+            add("PA", "measured", pH, float(pa_mM), 0.0)
+        for nacl_mM in NACL_CURVE_MM:
+            add("NaCl", "curve", pH, SALT_SCAN_PA_MM, float(nacl_mM))
+        for nacl_mM in gv._fig6c(pH, SALT_SCAN_PA_MM)[0]:
+            add("NaCl", "measured", pH, SALT_SCAN_PA_MM, float(nacl_mM))
+
+    return pd.DataFrame(rows)
+
+
+def plot_figure_s3(
+    table: pd.DataFrame,
+    output: Path,
 ) -> None:
     """Write the two-panel zeta comparison used for Figure S3."""
     import matplotlib
@@ -387,7 +445,7 @@ def plot_figure_s3(
     colors = {4.0: "#1f4fd8", 6.0: "#e08a00", 10.0: "#2ca02c"}
     fig, (axis_pa, axis_salt) = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
 
-    pa_fine = np.linspace(0.0, 7.7, 200)
+    curve = table[table.sampling == "curve"]
     for pH in PHS:
         measured_pa, measured, error = gv._fig6a(pH)
         color = colors[pH]
@@ -401,25 +459,16 @@ def plot_figure_s3(
             capsize=2,
             label=f"pH {pH:g}",
         )
-        model = [
-            zeta_pa(
-                pH,
-                pa,
-                K_by_pH[pH],
-                include_correlations=include_correlations,
-            )
-            for pa in pa_fine
-        ]
-        axis_pa.plot(pa_fine, model, "-", color=color, lw=1.8)
+        model = curve[(curve.scan == "PA") & (curve.pH == pH)].sort_values("PA_mM")
+        axis_pa.plot(model.PA_mM, model.zeta_mV, "-", color=color, lw=1.8)
 
     axis_pa.axhline(0.0, color="gray", lw=0.5)
     axis_pa.set_ylim(-75.0, 40.0)
     axis_pa.set_xlabel("[PA] (mM)")
     axis_pa.set_ylabel(r"$\zeta$ (mV)")
 
-    nacl_fine = np.linspace(1.0, 100.0, 200)
     for pH in PHS:
-        measured_salt, measured, error = gv._fig6c(pH, 1.5)
+        measured_salt, measured, error = gv._fig6c(pH, SALT_SCAN_PA_MM)
         color = colors[pH]
         axis_salt.errorbar(
             measured_salt,
@@ -431,17 +480,8 @@ def plot_figure_s3(
             capsize=2,
             label=f"pH {pH:g}",
         )
-        model = [
-            lateral_state(
-                pH,
-                nacl / 1000.0 + 0.003,
-                1.5e-3 / DILUTION,
-                K_by_pH[pH],
-                include_correlations=include_correlations,
-            ).zeta
-            for nacl in nacl_fine
-        ]
-        axis_salt.plot(nacl_fine, model, "-", color=color, lw=1.8)
+        model = curve[(curve.scan == "NaCl") & (curve.pH == pH)].sort_values("NaCl_mM")
+        axis_salt.plot(model.NaCl_mM, model.zeta_mV, "-", color=color, lw=1.8)
 
     axis_salt.axhline(0.0, color="gray", lw=0.5)
     axis_salt.set_xlabel("[NaCl] (mM)")
@@ -451,7 +491,11 @@ def plot_figure_s3(
     plt.close(fig)
 
 
-def _print_predictions(K_by_pH: dict[float, float], include_correlations: bool) -> None:
+def _print_predictions(
+    K_by_pH: dict[float, float],
+    table: pd.DataFrame,
+    include_correlations: bool,
+) -> None:
     label = "LC-AR-PB" if include_correlations else "AR-PB baseline"
     print(label)
     print(f"  binding plane Z = {R_BETA:g} A; peptide-only MC potential; MC q_PA(Z)")
@@ -462,39 +506,23 @@ def _print_predictions(K_by_pH: dict[float, float], include_correlations: bool) 
             f"chi2 = {_zeta_chi2(pH, K_by_pH[pH], include_correlations):.1f}"
         )
 
+    measured = table[table.sampling == "measured"]
+
     print("\nFigure S3A predictions")
     print(f"  {'pH':>4} {'PA/mM':>8} {'z_MC':>7} {'theta':>8} {'mu_corr/kT':>11} {'zeta/mV':>9}")
-    for pH in PHS:
-        pa_values, _measured, _error = gv._fig6a(pH)
-        for pa_mM in pa_values:
-            state = lateral_state(
-                pH,
-                I_ANCHOR,
-                pa_mM * 1e-3 / DILUTION,
-                K_by_pH[pH],
-                include_correlations=include_correlations,
-            )
-            print(
-                f"  {pH:>4g} {pa_mM:>8.2f} {state.valence:>7.3f} {state.theta:>8.4f} "
-                f"{state.beta_mu_corr:>11.3f} {state.zeta:>9.2f}"
-            )
+    for row in measured[measured.scan == "PA"].itertuples():
+        print(
+            f"  {row.pH:>4g} {row.PA_mM:>8.2f} {row.z_MC:>7.3f} {row.theta:>8.4f} "
+            f"{row.beta_mu_corr:>11.3f} {row.zeta_mV:>9.2f}"
+        )
 
-    print("\nFigure S3B predictions at 1.5 mM PA")
+    print(f"\nFigure S3B predictions at {SALT_SCAN_PA_MM:g} mM PA")
     print(f"  {'pH':>4} {'NaCl/mM':>9} {'z_MC':>7} {'theta':>8} {'zeta/mV':>9}")
-    for pH in PHS:
-        salt_values, _measured, _error = gv._fig6c(pH, 1.5)
-        for nacl_mM in salt_values:
-            state = lateral_state(
-                pH,
-                nacl_mM / 1000.0 + 0.003,
-                1.5e-3 / DILUTION,
-                K_by_pH[pH],
-                include_correlations=include_correlations,
-            )
-            print(
-                f"  {pH:>4g} {nacl_mM:>9.0f} {state.valence:>7.3f} {state.theta:>8.4f} "
-                f"{state.zeta:>9.2f}"
-            )
+    for row in measured[measured.scan == "NaCl"].itertuples():
+        print(
+            f"  {row.pH:>4g} {row.NaCl_mM:>9.0f} {row.z_MC:>7.3f} {row.theta:>8.4f} "
+            f"{row.zeta_mV:>9.2f}"
+        )
 
 
 def main() -> None:
@@ -506,6 +534,12 @@ def main() -> None:
         help="output Figure S3-style PNG",
     )
     parser.add_argument(
+        "--csv",
+        type=Path,
+        default=Path(__file__).resolve().parent / "model_zeta.csv",
+        help="output CSV of the predicted [PA] and [NaCl] zeta scans",
+    )
+    parser.add_argument(
         "--no-correlations",
         action="store_true",
         help="omit the residual correlation free energy for a matched AR-PB baseline",
@@ -513,9 +547,11 @@ def main() -> None:
     args = parser.parse_args()
     include_correlations = not args.no_correlations
     K_by_pH = fit_K_by_pH(include_correlations)
-    _print_predictions(K_by_pH, include_correlations)
-    plot_figure_s3(K_by_pH, args.output, include_correlations=include_correlations)
-    print(f"\nsaved {args.output}")
+    table = scan_table(K_by_pH, include_correlations=include_correlations)
+    _print_predictions(K_by_pH, table, include_correlations)
+    table.to_csv(args.csv, index=False)
+    plot_figure_s3(table, args.output)
+    print(f"\nsaved {args.output}\nsaved {args.csv}")
 
 
 if __name__ == "__main__":

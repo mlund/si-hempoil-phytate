@@ -24,10 +24,13 @@ uv run writeup/build.py
 - `mc/composite_I0.005.png`, `mc/composite_I0.03.png`, and
   `mc/composite_I0.15.png`
 - `zeta/fig_lc_arpb_schematic.png`
-- `zeta/fig_lateral_arpb.png`
+- `zeta/fig_lateral_arpb.png` and `zeta/model_zeta.csv`
 - `itc/fig_itc_lateral_arpb.png`
 
-It also prints the zeta-model and ITC fit parameters.
+It also prints the zeta-model and ITC fit parameters. `zeta/model_zeta.csv` holds the
+predicted LC--AR-PB zeta for both scans, in long format: `sampling == "curve"` is the
+dense grid drawn in the figure, `sampling == "measured"` the rows matching the measured
+conditions (Table S-3a).
 
 To rebuild the tracked CSV layer from raw MC output, obtain `mc/runs/` separately
 and run this first:
