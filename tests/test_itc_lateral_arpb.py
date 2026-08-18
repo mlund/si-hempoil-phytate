@@ -93,3 +93,16 @@ def test_onesite_reproduces_nanoanalyze_fit():
     assert Ka == pytest.approx(reference["Ka"], rel=0.05)
     assert n == pytest.approx(reference["n"], rel=0.05)
     assert dH == pytest.approx(reference["dH"], rel=0.05)
+
+
+@pytest.mark.parametrize("pH", [4.0, 6.0, 10.0])
+def test_every_titration_skips_exactly_the_priming_injection(pH):
+    """The dropped point is the small priming injection at every pH, not just pH 4."""
+    titration = itc_data.load(pH)
+    mask = titration.fit_mask
+    assert np.count_nonzero(~mask) == itc_data.SKIP_INJECTIONS
+    assert not mask[0]
+    # The priming injection is smaller than the regular ones, which are uniform.
+    regular = titration.vinj_uL[mask]
+    assert titration.vinj_uL[0] < regular.min()
+    assert regular.std() == pytest.approx(0.0, abs=1e-9)
