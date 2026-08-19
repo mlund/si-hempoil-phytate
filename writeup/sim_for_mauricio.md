@@ -42,7 +42,7 @@ net oil-body charge. This local field provides attraction near pH 6, where the n
 charge is small, and permits overcharging at pH 4. Figure 10 shows the low-salt MC
 profiles underlying this interpretation.
 
-![Figure 10. MC profiles at 5 mM ionic strength versus distance $r$ from the grafted wall: (A) potential of mean force $w(r)$; (B) ensemble P–O proxy order $S^2_\mathrm{ens}$ (solid) and whole-molecule wall-pose order $S_\mathrm{wall}$ (dashed); (C) electric potential, simulated $\zeta$ at the shear plane (open marker), and measured $\zeta$ (filled marker at an arbitrary horizontal position); and (D) phytate charge. The shear plane is the outermost position where the peptide fixed-charge density exceeds 2% of its peak, 36–43 Å from the wall across pH. Panel B reports equilibrium order, not rotational rates.](../mc/composite_I0.005.png)
+![Figure 10. MC profiles at 5 mM ionic strength versus distance $r$ from the grafted wall: (A) potential of mean force $w(r)$; (B) ensemble P–O proxy order $S^2_\mathrm{ens}$ (solid) and whole-molecule wall-pose order $S_\mathrm{wall}$ (dashed); (C) electric potential, simulated $\zeta$ at the shear plane (open marker), and measured $\zeta$ (dashed line, shaded band $\pm$ one standard deviation over replicates; drawn across the panel because the measurement has no $r$ coordinate); and (D) phytate charge. The shear plane is the outermost position where the peptide fixed-charge density exceeds 2% of its peak, 36–43 Å from the wall across pH. Panel B reports equilibrium order, not rotational rates.](../mc/composite_I0.005.png)
 
 The ionizable oleosin termini make the brush periphery more positive than the surface
 average. The peptide-only binding potential is $+62$ mV at pH 4 and remains positive
@@ -558,7 +558,7 @@ screening of adsorption.
 
 ![Simulation composite at $I = 0.03$ M (panels as in the low-salt composite).](../mc/composite_I0.03.png)
 
-![Simulation composite at $I = 0.15$ M. The measured $\zeta$ marker corresponds to the highest measured salt concentration, 100 mM added NaCl. No measurement was available at 150 mM; the marker therefore overestimates $|\zeta|$ at the simulated ionic strength.](../mc/composite_I0.15.png)
+![Simulation composite at $I = 0.15$ M. The measured $\zeta$ line corresponds to the highest measured salt concentration, 100 mM added NaCl. Because $|\zeta|$ falls with salt, the line overestimates $|\zeta|$ at the simulated ionic strength, although the Debye length differs by only a factor of $1.2$ between the two conditions.](../mc/composite_I0.15.png)
 
 ## S-5. NMR interpretation and simulation scope
 

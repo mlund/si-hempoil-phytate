@@ -68,9 +68,11 @@ def plot_composite(ionic: float, path: Path) -> None:
             xp = e.NaCl_mM.to_numpy()
             mean = float(np.interp(nacl, xp, e.mean_mV.to_numpy()))
             sd = float(np.interp(nacl, xp, e.sd_mV.to_numpy()))
-            # Measured zeta has no intrinsic r; the +4 A offset only separates it from the
-            # simulated marker. Read this point by height (zeta), not by its x-position.
-            axC.errorbar(zc.r_shear + 4, mean, yerr=sd, fmt="s", color=c, capsize=3, zorder=5)
+            # Measured zeta has no intrinsic r, so it spans the panel as a line rather
+            # than sitting at one coordinate: only its height is meaningful.  The band
+            # is +/- one standard deviation of the replicates.
+            axC.axhline(mean, color=c, ls="--", lw=1.0, zorder=4)
+            axC.axhspan(mean - sd, mean + sd, color=c, alpha=0.10, lw=0, zorder=1)
 
         q = _sel(win, ionic, pH)
         axD.plot(q.r, q.q_ino, color=c, marker="o", ms=3, lw=1)
@@ -104,8 +106,8 @@ def plot_composite(ionic: float, path: Path) -> None:
     axA.legend(frameon=False, title=f"I = {ionic:g} M")
     axC.legend(
         handles=[
-            Line2D([], [], marker="o", mfc="white", mec="gray", ls="", label="sim ζ"),
-            Line2D([], [], marker="s", color="gray", ls="", label="exp ζ"),
+            Line2D([], [], marker="o", mfc="white", mec="gray", ls="", label="sim ζ (shear plane)"),
+            Line2D([], [], color="gray", ls="--", lw=1.0, label="exp ζ ± SD (bare OB)"),
         ],
         frameon=False,
         fontsize="small",
