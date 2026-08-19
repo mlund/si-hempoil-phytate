@@ -9,7 +9,7 @@ dependencies = [
     "pandas>=3.0",
     "matplotlib>=3.11",
     "pyyaml>=6.0",
-    "jupyterlab>=4.6",
+    "jupyterlab>=4.6.2",  # 4.6.0-4.6.1 carry XSS and extension-manager advisories
     "ipykernel>=7.3",
     # LC--AR--PB and ITC fitting
     "scipy>=1.14",
