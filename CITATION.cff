@@ -1,0 +1,26 @@
+# GitHub's "Cite this repository" reads this; Zenodo reads .zenodo.json instead, so keep both in sync.
+cff-version: 1.2.0
+message: "If you use this material, please cite it as below."
+title: "Supporting information: Phytate-hempseed oil body interactions: effect of pH on colloidal, thermodynamic, and spectroscopic properties"
+type: dataset
+license: CC-BY-4.0
+repository-code: "https://github.com/mlund/si-hempoil-phytate"
+authors:
+  - family-names: Oyarzún
+    given-names: Mauricio
+    affiliation: "Department of Food Science, University of Copenhagen, Denmark"
+    orcid: "https://orcid.org/0000-0002-1195-8623"
+  - family-names: Lund
+    given-names: Mikael
+    affiliation: "Division of Theoretical Chemistry, Department of Chemistry, Lund University, Sweden"
+    orcid: "https://orcid.org/0000-0001-8178-8175"
+keywords:
+  - oil bodies
+  - phytate
+  - oleosin
+  - isothermal titration calorimetry
+  - zeta potential
+  - Monte Carlo simulation
+  - Poisson-Boltzmann
+  - charge regulation
+# TODO: add preferred-citation (article, DOI, all 8 authors) once the manuscript is published.

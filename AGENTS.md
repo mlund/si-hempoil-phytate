@@ -1,0 +1,16 @@
+- tests should focus first on _physics_; second _code correctness_
+- don't commit image files
+- ask before committing
+- don't add co-authorship to gh commits/prs/issues. be brief.
+- prefer why over what comments
+- Writing:
+  - use `doi2bib` cli to verify references
+  - use [`/scientific-writing`](https://raw.githubusercontent.com/mlund/claude-skills/refs/heads/main/plugins/scientific-writing/skills/scientific-writing/SKILL.md)
+  - README.md is end-user documentation
+- python:
+  - idiomatic style and naming; docstrings
+  - ruff check and format before committing
+  - platform independent I/O (mac, linux, windows)
+  - use `uv` and lock file
+  - use `scipy.constants`
+  - prefer [deep module design](https://deepwiki.com/mattpocock/skills/4.1.4-designing-deep-modules)

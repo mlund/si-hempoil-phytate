@@ -1,0 +1,56 @@
+[project]
+name = "si-hempoil-phytate"
+version = "0.1.0"
+description = "MC and adsorption-regulated PB analysis of phytate near an oleosin peptide brush."
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE", "LICENSE-DATA"]
+dependencies = [
+    # PMF / charge / potential / shape analysis (mc/extract_pmf.py, mc/extract_profiles.py)
+    "numpy>=2.5",
+    "pandas>=3.0",
+    "matplotlib>=3.11",
+    "pyyaml>=6.0",
+    "jupyterlab>=4.6.4",  # earlier 4.6.x carry XSS and extension-manager advisories
+    "ipykernel>=7.3",
+    # LC--AR--PB and ITC fitting
+    "scipy>=1.14",
+    "xlrd>=2.0.2",
+    "openpyxl>=3.1.5",
+]
+
+[tool.uv]
+# Scripts + notebook repo, not an installable package -- only resolve dependencies.
+package = false
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.20",
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["zeta", "itc"]  # flat analysis modules imported directly by tests
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-include = ["*.ipynb"]  # lint and format Jupyter notebooks too
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, pyupgrade, bugbear, simplify, pathlib, explicit encoding, docstrings
+select = ["E", "F", "I", "UP", "B", "SIM", "PTH", "PLW1514", "D"]
+# PLW1514 is a preview rule; explicit-preview-rules keeps other preview rules off.
+preview = true
+explicit-preview-rules = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# Notebooks are exploratory: tolerate unused vars, loop-var reuse, un-strict zip,
+# throwaway lambdas, physics `I` (ionic strength), long print lines, import order,
+# mid-cell imports, and markdown cells in place of docstrings.
+"*.ipynb" = ["F841", "B020", "B905", "E731", "E741", "E501", "I001", "E402", "D"]
+"tests/**" = ["D"]  # test names say what they check

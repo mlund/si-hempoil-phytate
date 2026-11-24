@@ -1,0 +1,29 @@
+{
+    "title": "Supporting information: Phytate-hempseed oil body interactions: effect of pH on colloidal, thermodynamic, and spectroscopic properties",
+    "description": "<p>Code, inputs and data for reproducing the simulation, theory and ITC/zeta-potential analyses in the associated manuscript (in preparation). Contents: Monte Carlo (Faunus) inputs and extracted potential-of-mean-force, potential and charge profiles for phytate near an oleosin peptide brush; a lateral-correlation adsorption-regulated Poisson-Boltzmann (LC-AR-PB) model; measured zeta potentials; raw ITC exports and binding fits. Every figure and reported table rebuilds from a clean checkout with <code>uv run make_figures.py</code>.</p><p>Licenses: code under MIT (LICENSE); data, figures and text under CC-BY-4.0 (LICENSE-DATA).</p>",
+    "creators": [
+        {
+            "name": "Oyarzún, Mauricio",
+            "affiliation": "Department of Food Science, University of Copenhagen, Denmark",
+            "orcid": "0000-0002-1195-8623"
+        },
+        {
+            "name": "Lund, Mikael",
+            "affiliation": "Division of Theoretical Chemistry, Department of Chemistry, Lund University, Sweden",
+            "orcid": "0000-0001-8178-8175"
+        }
+    ],
+    "keywords": [
+        "oil bodies",
+        "phytate",
+        "oleosin",
+        "isothermal titration calorimetry",
+        "zeta potential",
+        "Monte Carlo simulation",
+        "Poisson-Boltzmann",
+        "charge regulation"
+    ],
+    "license": "CC-BY-4.0",
+    "access_right": "open",
+    "upload_type": "workflow"
+}

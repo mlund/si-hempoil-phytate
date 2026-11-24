@@ -1,0 +1,257 @@
+{# Oleosin N-terminal brush on a slit wall with titrating phytate (IP6).
+ #
+ # The N-terminal arm of Cannabis sativa oleosin (UniProt A0A803P977)
+ # protrudes from the oil body surface into the aqueous phase
+ # (https://doi.org/10.1083/jcb.117.2.327). CTR is tethered to the
+ # bottom wall (oil body surface); NTR dangles freely into solution.
+ #
+ # Phytate has 12 dissociable protons → 13 charge states.
+ # pKa values from De Stefano et al. (https://doi.org/10.1021/je020124m).
+ #
+ # Uses MiniJinja templates — see https://docs.rs/minijinja
+ #}
+{% set n_peptides = 50 %}
+{% set area_per_peptide = 340.0 %}{# Å²/peptide — grafting density σ = 1/area_per_peptide #}
+{% set Lx = (n_peptides * area_per_peptide) ** 0.5 %}
+{% set Ly = Lx %}
+{% set Lz = 200.0 %}
+{% set pH = 7.0 %}
+{% set salt = 0.15 %}
+{% set n_phytate = 5 %}
+{% set num_windows = 40 %}{# adjust to match available cores #}
+{% set window_width = 6.0 %}
+{% set bin_width = 0.5 %}
+{# Faunus (PR #75) requires the window spacing to be an integer multiple of bin_width, so snap
+   the even split of the sampled range onto the bin grid. Stays < window_width, i.e. windows
+   overlap, which the same validator also requires. #}
+{% set window_spacing = ((Lz / 2 - window_width) / (num_windows - 1) / bin_width) | round | int * bin_width %}
+{% set active_state = 9 %}
+{# Phytate protonation states: name, pKa for deprotonation to next state #}
+{% set pa_names = ["H₁₂PA", "H₁₁PA¹⁻", "H₁₀PA²⁻", "H₉PA³⁻", "H₈PA⁴⁻", "H₇PA⁵⁻",
+                   "H₆PA⁶⁻", "H₅PA⁷⁻", "H₄PA⁸⁻", "H₃PA⁹⁻", "H₂PA¹⁰⁻", "HPA¹¹⁻", "PA¹²⁻"] %}
+{% set pa_pKa = [1.1, 1.5, 1.7, 2.1, 2.5, 2.9, 5.72, 6.28, 6.81, 7.60, 9.94, 11.84] %}
+{% set n_states = pa_names | length %}
+{# Phytate bead parameters #}
+{% set ino_sigma = 6.2 %}
+{% set ph_sigma = 5.8 %}
+{% set ph_mass = 95.0 %}
+{# Which of the six ring phosphates carry the k-th extra negative charge. The sets maximise the
+   minimum pairwise distance, which for this geometry is exactly the minimum-intramolecular-
+   repulsion arrangement (verified against a screened Coulomb over all C(6,k) patterns).
+   Smearing the charge as -i/6 over all six sites made the molecule sixfold symmetric in every
+   state, so it carried no dipole and rounding left odd states at -4.9998 e rather than -5.
+   Intramolecular Coulomb stays excluded (see `exclusions` below): that repulsion is already
+   carried empirically by the pKa ladder, so counting it again would skew the speciation
+   equilibrium. The pattern therefore acts only through the molecule's external multipoles. #}
+{% set maxsep = [[], [0], [0, 3], [0, 2, 4], [0, 1, 3, 5], [0, 1, 2, 4, 5], [0, 1, 2, 3, 4, 5]] %}
+{% set epsilon = 0.8368 %}
+{# Non-phytate atom sigmas for explicit cross-pair interactions #}
+{% set aa_sigmas = {"ARG": 6.56, "ASP": 5.58, "ASN": 5.68, "GLU": 5.92, "GLN": 6.02,
+                    "LYS": 6.36, "HIS": 6.08, "SER": 5.18, "THR": 5.62, "CYS": 5.48,
+                    "MET": 6.18, "PHE": 6.36, "TYR": 6.46, "TRP": 6.78, "ALA": 5.04,
+                    "GLY": 4.5, "ILE": 6.18, "LEU": 6.18, "PRO": 5.56, "VAL": 5.86,
+                    "ANK": 4.0, "NTR": 4.0, "HNTR": 4.0, "CTR": 4.0, "HCTR": 4.0,
+                    "HGLU": 5.92, "LYS0": 6.36} %}
+{# All-pairs exclusions for 7-bead phytate molecule #}
+{% set n_beads = 7 %}
+
+atoms:
+  - {name: ARG, charge: 1.0,  hydrophobicity: !Lambda 0.7407902764839954, mass: 156.19, σ: 6.56, ε: 0.8368}
+  - {name: ASP, charge: -1.0, hydrophobicity: !Lambda 0.092587557536158,  mass: 115.09, σ: 5.58, ε: 0.8368}
+  - {name: ASN, charge: 0.0,  hydrophobicity: !Lambda 0.3706962163690402, mass: 114.1,  σ: 5.68, ε: 0.8368}
+  - {name: GLU, charge: -1.0, hydrophobicity: !Lambda 0.000249590539426,  mass: 129.11, σ: 5.92, ε: 0.8368}
+  - {name: LYS, charge: 1.0,  hydrophobicity: !Lambda 0.1380602542039267, mass: 128.17, σ: 6.36, ε: 0.8368}
+  - {name: HIS, charge: 0.0,  hydrophobicity: !Lambda 0.4087176216525476, mass: 137.14, σ: 6.08, ε: 0.8368}
+  - {name: GLN, charge: 0.0,  hydrophobicity: !Lambda 0.3143449791669133, mass: 128.13, σ: 6.02, ε: 0.8368}
+  - {name: SER, charge: 0.0,  hydrophobicity: !Lambda 0.4473142572693176, mass: 87.08,  σ: 5.18, ε: 0.8368}
+  - {name: CYS, charge: 0.0,  hydrophobicity: !Lambda 0.5922529084601322, mass: 103.14, σ: 5.48, ε: 0.8368}
+  - {name: GLY, charge: 0.0,  hydrophobicity: !Lambda 0.7538308115197386, mass: 57.05,  σ: 4.5,  ε: 0.8368}
+  - {name: THR, charge: 0.0,  hydrophobicity: !Lambda 0.2672387936544146, mass: 101.11, σ: 5.62, ε: 0.8368}
+  - {name: ALA, charge: 0.0,  hydrophobicity: !Lambda 0.3377244362031627, mass: 71.07,  σ: 5.04, ε: 0.8368}
+  - {name: MET, charge: 0.0,  hydrophobicity: !Lambda 0.5170874160398543, mass: 131.2,  σ: 6.18, ε: 0.8368}
+  - {name: TYR, charge: 0.0,  hydrophobicity: !Lambda 0.950628687301107,  mass: 163.18, σ: 6.46, ε: 0.8368}
+  - {name: VAL, charge: 0.0,  hydrophobicity: !Lambda 0.2936174211771383, mass: 99.13,  σ: 5.86, ε: 0.8368}
+  - {name: TRP, charge: 0.0,  hydrophobicity: !Lambda 1.033450123574512,  mass: 186.22, σ: 6.78, ε: 0.8368}
+  - {name: LEU, charge: 0.0,  hydrophobicity: !Lambda 0.5548615312993875, mass: 113.16, σ: 6.18, ε: 0.8368}
+  - {name: ILE, charge: 0.0,  hydrophobicity: !Lambda 0.5130398874425708, mass: 113.16, σ: 6.18, ε: 0.8368}
+  - {name: PRO, charge: 0.0,  hydrophobicity: !Lambda 0.3469777523519372, mass: 97.12,  σ: 5.56, ε: 0.8368}
+  - {name: PHE, charge: 0.0,  hydrophobicity: !Lambda 0.8906449355499866, mass: 147.18, σ: 6.36, ε: 0.8368}
+  - {name: ANK,  charge: 0.0, hydrophobicity: !Lambda 0.0, mass: 1.0,  σ: 4.0, ε: {{ epsilon }}}
+  - {name: NTR,  charge: 0.0, hydrophobicity: !Lambda 0.0, mass: 14.0, σ: 4.0, ε: {{ epsilon }}}
+  - {name: HNTR, charge: 1.0, hydrophobicity: !Lambda 0.0, mass: 14.0, σ: 4.0, ε: {{ epsilon }}}
+  - {name: CTR,  charge: -1.0,hydrophobicity: !Lambda 0.0, mass: 18.0, σ: 4.0, ε: {{ epsilon }}}
+  - {name: HCTR, charge: 0.0, hydrophobicity: !Lambda 0.0, mass: 18.0, σ: 4.0, ε: {{ epsilon }}}
+  - {name: HGLU, charge: 0.0, hydrophobicity: !Lambda 0.000249590539426,  mass: 129.11, σ: 5.92, ε: {{ epsilon }}}
+  - {name: LYS0, charge: 0.0, hydrophobicity: !Lambda 0.1380602542039267, mass: 128.17, σ: 6.36, ε: {{ epsilon }}}
+  - {name: INO, mass: 180.0, σ: {{ ino_sigma }}, ε: {{ epsilon }}, charge: 0.0, hydrophobicity: !Lambda 0.0}
+  {# Three phosphate types by integer charge: PH0 = -OPO3H2, PH1 = -OPO3H(-), PH2 = -OPO3(2-).
+     NOTE atom_id order is INO, PH0, PH1, PH2, H+; state.yaml stores atom_id, not name. #}
+  {% for q in range(3) %}
+  - {name: PH{{ q }}, mass: {{ ph_mass }}, σ: {{ ph_sigma }}, ε: {{ epsilon }}, charge: -{{ q }}.0, hydrophobicity: !Lambda 0.0}
+  {% endfor %}
+  - {name: H+, mass: 1.0, σ: 1.0, ε: {{ epsilon }}, hydrophobicity: !Lambda 0.0, activity: {{ 10.0 ** (-pH) }}}
+
+molecules:
+  - name: peptide
+    from_structure: {sequence: "nMKSFLPESGPSAQQca", k: 80.33, req: 3.8}
+    excluded_neighbours: 1
+    keep_excluded_coulomb: true
+  # {{ n_states }} phytate protonation states (7 atoms each for molecular swap)
+  {% for i in range(n_states) %}
+  - name: "{{ pa_names[i] }}"
+    from_structure: "phytate.xyz"
+    {# net charge -i: for i<=6 put -1 on the i most-separated sites; beyond that every site is
+       already -1, so put -2 on the (i-6) most-separated sites. #}
+    atoms: [INO, {% for j in range(6) %}{% if i <= 6 %}{{ "PH1" if j in maxsep[i] else "PH0" }}{% else %}{{ "PH2" if j in maxsep[i - 6] else "PH1" }}{% endif %}{{ ", " if not loop.last }}{% endfor %}]
+    exclusions: [{% for i in range(n_beads) %}{% for j in range(i+1, n_beads) %}[{{ i }},{{ j }}]{{ ", " if not (i == n_beads-2 and j == n_beads-1) }}{% endfor %}{% endfor %}]
+  {% endfor %}
+
+system:
+  cell: !Slit [{{ Lx }}, {{ Ly }}, {{ Lz }}]
+
+  medium:
+    permittivity: !Water
+    temperature: 298.15
+    salt: [!NaCl, {{ salt }}]
+
+  blocks:
+    - molecule: peptide
+      N: {{ n_peptides }}
+      insert: !RandomWalk {bond_length: 3.8}
+    {% for i in range(n_states) %}
+    - molecule: "{{ pa_names[i] }}"
+      N: {{ n_phytate }}
+      active: {{ 1 if i == active_state else 0 }}
+      insert: !RandomCOM {directions: z}
+    {% endfor %}
+
+  energy:
+    nonbonded:
+      default:
+        - !Coulomb {cutoff: 1000.0}
+        - !AshbaughHatch {mixing: arithmetic, cutoff: 20.0}
+      # Phytate-AA: WCA (purely repulsive); Coulomb inherited from default via append
+      append:
+        {% for aa_name, aa_s in aa_sigmas | items %}
+        [{{ aa_name }}, INO]:
+          - !AshbaughHatch {epsilon: {{ epsilon }}, sigma: {{ ((ino_sigma + aa_s) / 2) | round(4) }}, wca: true}
+        {% for q in range(3) %}
+        [{{ aa_name }}, PH{{ q }}]:
+          - !AshbaughHatch {epsilon: {{ epsilon }}, sigma: {{ ((ph_sigma + aa_s) / 2) | round(4) }}, wca: true}
+        {% endfor %}
+        {% endfor %}
+    custom_external:
+      - selection: "name ANK and molecule peptide"
+        function: "0.5 * k * (z - z0)^2"
+        constants:
+          k: 0.5
+          z0: {{ -Lz / 2 + 0.01 }}
+
+analysis:
+  - !ElectricPotentialProfile
+    frequency: !Every 10
+    selection: "all" 
+    resolution: 0.5
+    file: potential_all.csv
+  - !ElectricPotentialProfile
+    frequency: !Every 10
+    selection: "molecule peptide"
+    resolution: 0.5
+    file: potential_peptide.csv
+  # Structural monomer density of the brush. The Zwanzig roughness amplitude scales with
+  # the local density of peptide contacts, so this -- not the sign-changing peptide charge
+  # density -- sets the roughness profile g(r) that renormalises the PMF and D. Binning
+  # atoms (use_com off) is what makes it a monomer profile rather than a grafting-point
+  # spike. See writeup S-5.
+  - !DensityProfile
+    frequency: !Every 10
+    selection: "molecule peptide"
+    resolution: 0.5
+    file: peptide_profile.csv
+# - !Trajectory
+#   file: "traj.xtc"
+#   frequency: !Every 1000
+# - !Energy
+#   file: "energy.csv.gz"
+#   frequency: !Every 1000
+  - !Multipole
+    selection: "molecule peptide"
+    frequency: !Every 10
+  - !CollectiveVariable
+    property: atom_position
+    selection: "atomtype INO"
+    dimension: z
+    frequency: !Every 10
+  - !PolymerShape
+    selection: "atomtype INO"
+    frequency: !Every 10
+  - !Multipole
+    selection: "atomtype INO"
+    frequency: !Every 10
+  # Widom rotational perturbation: the equilibrium orientational cage imposed on
+  # phytate held at each umbrella window. It is independent of MC move step size.
+  # mean_S2 is the ensemble second-rank order of the six phosphate->centre
+  # ester-proxy vectors; W is the conditional cage free-energy cost relative to the
+  # best trial orientation. Neither quantity is a correlation time or an NMR rate,
+  # and W must not be added to the already orientation-averaged PMF. See writeup S-5.
+  - !WidomRotation
+    selection: "atomtype INO"   # phytate's unique centre bead -> survives speciation name swaps
+    orientations: 500
+    vectors:
+      {% for j in range(1, 7) %}
+      - !pair [0, {{ j }}]       # phosphate j -> inositol centre (31P ester-bond proxy)
+      {% endfor %}
+      - !axis 2                  # largest gyration axis (phytate near-spherical, so secondary)
+    torque: true
+    stiffness: true
+    file: widomrot.csv.gz
+    frequency: !Every 50         # remember: 500 evals/sample -> keep sparse; tune to run length
+  {% for i in range(n_states) %}
+  - !CollectiveVariable
+    property: count
+    selection: "molecule '{{ pa_names[i] }}'"
+    frequency: !Every 10
+  {% endfor %}
+
+propagate:
+  seed: Hardware
+  criterion: Metropolis
+  repeat: 50000
+  collections:
+    - !Stochastic
+      repeat: 40
+      moves:
+      # - !TranslateAtom {molecule: peptide, dp: 10.0, repeat: 10}
+        - !TranslateMolecule {molecule: peptide, dp: 10.0, repeat: 10, directions: xy}
+        - !RotateMolecule {molecule: peptide, max_angle: 0.2, repeat: 10}
+        - !PivotMove {molecule: peptide, max_angle: 0.5, repeat: 10}
+        {% for i in range(n_states) %}
+        - !TranslateMolecule {molecule: "{{ pa_names[i] }}", dp: 5.0, repeat: 20, directions: z}
+        - !RotateMolecule {molecule: "{{ pa_names[i] }}", max_angle: 1.0, repeat: 1}
+        {% endfor %}
+        - !SpeciationMove
+          temperature: 298.15
+          repeat: 10
+          reactions:
+            {% for i in range(pa_pKa | length) %}
+            - ["{{ pa_names[i] }} = {{ pa_names[i + 1] }} + 👻H+", !pK {{ pa_pKa[i] }}]
+            {% endfor %}
+            - ["⚛HGLU = ⚛GLU  + 👻H+", !pK 4.24]
+            - ["⚛LYS  = ⚛LYS0 + 👻H+", !pK 10.4]
+            - ["⚛HNTR = ⚛NTR  + 👻H+", !pK 8.0]
+            - ["⚛HCTR = ⚛CTR  + 👻H+", !pK 3.67]
+
+# PMF of phytate z-position relative to the oleosin brush.
+# Run with: faunus umbrella -i input.yaml --state state.yaml
+umbrella:
+  cv:
+    property: atom_position
+    selection: "atomtype INO"
+    dimension: z
+  windows:
+    range: [{{ -Lz / 2 }}, 0]
+    width: {{ window_width }}
+    spacing: {{ window_spacing }}
+    bin_width: {{ bin_width }}
+  drive:
+    force_constant: 5.0
